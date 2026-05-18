@@ -1,6 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/create", "destination": "/index.html" },
-    { "source": "/listing/(.*)", "destination": "/index.html" }
-  ]
+  "outputDirectory": "dist"
 }
