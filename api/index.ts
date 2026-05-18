@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { handle } from "hono/vercel";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router.js";
 import { createContext } from "./context.js";
@@ -17,5 +16,4 @@ app.all("/trpc/*", async (c) => {
 
 app.all("/*", (c) => c.json({ error: "Not Found" }, 404));
 
-// For Vercel
-export default handle(app);
+export default app.fetch;
