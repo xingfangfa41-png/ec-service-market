@@ -1,23 +1,10 @@
 {
-  "version": 2,
-  "builds": [
+  "outputDirectory": "dist/public",
+  "framework": null,
+  "rewrites": [
     {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/trpc/(.*)",
-      "dest": "/api/index.ts"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
     }
   ]
 }
