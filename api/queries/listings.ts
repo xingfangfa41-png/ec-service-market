@@ -1,5 +1,5 @@
-import { getDb } from "./connection";
-import { listings, publishers } from "@db/schema";
+import { getDb } from "./connection.js";
+import { listings, publishers } from "../../db/schema.js";
 import { eq, desc } from "drizzle-orm";
 
 export async function findAllListings(category?: string) {

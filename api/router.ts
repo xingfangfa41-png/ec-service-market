@@ -1,4 +1,4 @@
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery } from "./middleware.js";
 import { z } from "zod";
 import {
   findAllListings,
@@ -8,7 +8,7 @@ import {
   findPublisherByFingerprint,
   createPublisher,
   findListingByPublisherId,
-} from "./queries/listings";
+} from "./queries/listings.js";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
