@@ -6,7 +6,7 @@ import { createContext } from "./context.js";
 
 const app = new Hono();
 
-app.all("/api/trpc/*", async (c) => {
+app.all("/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",
     req: c.req.raw,
@@ -15,7 +15,7 @@ app.all("/api/trpc/*", async (c) => {
   });
 });
 
-app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
+app.all("/*", (c) => c.json({ error: "Not Found" }, 404));
 
 // For Vercel
 export default handle(app);
