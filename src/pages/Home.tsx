@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { trpc } from "@/providers/trpc";
+import { getAllListings, checkPublisherListing, type Listing } from "@/lib/turso";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -36,24 +36,42 @@ function getCategoryBadgeClass(category: string) {
 export default function Home() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("all");
-  const { data: listings, isLoading } = trpc.listing.list.useQuery(
-    activeCategory === "all" ? undefined : { category: activeCategory }
-  );
-
-  // Generate fingerprint from browser
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [fingerprint, setFingerprint] = useState("");
+  const [myListing, setMyListing] = useState<Listing | null>(null);
+
+  // Generate fingerprint
   useEffect(() => {
-    const fp =
-      localStorage.getItem("publisher_fp") ||
-      crypto.randomUUID();
+    const fp = localStorage.getItem("publisher_fp") || crypto.randomUUID();
     localStorage.setItem("publisher_fp", fp);
     setFingerprint(fp);
   }, []);
 
-  const { data: myListing } = trpc.listing.checkPublisher.useQuery(
-    { publisherId: fingerprint },
-    { enabled: !!fingerprint }
-  );
+  // Check if user already has a listing
+  useEffect(() => {
+    if (!fingerprint) return;
+    checkPublisherListing(fingerprint).then(setMyListing).catch(() => {});
+  }, [fingerprint]);
+
+  // Load listings
+  const loadListings = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const data = await getAllListings(activeCategory === "all" ? undefined : activeCategory);
+      setListings(data);
+    } catch (err: any) {
+      setError("加载失败: " + (err.message || "未知错误"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeCategory]);
+
+  useEffect(() => {
+    loadListings();
+  }, [loadListings]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -65,12 +83,8 @@ export default function Home() {
               <Gamepad2 className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">
-                游戏服务广场
-              </h1>
-              <p className="text-[11px] text-zinc-500 leading-none">
-                陪聊 · 找搭子 · 公会宣传 · 卖号
-              </p>
+              <h1 className="text-lg font-bold text-white tracking-tight">游戏服务广场</h1>
+              <p className="text-[11px] text-zinc-500 leading-none">陪聊 · 找搭子 · 公会宣传 · 卖号</p>
             </div>
           </div>
           <Button
@@ -89,7 +103,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="mx-auto max-w-6xl px-4 py-6">
         {/* Category Filter */}
         <div className="mb-6 flex flex-wrap gap-2">
@@ -112,67 +126,43 @@ export default function Home() {
         {/* Stats */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            {
-              label: "陪聊",
-              count: listings?.filter((l) => l.category === "陪聊").length ?? 0,
-              icon: MessageCircle,
-              color: "text-pink-400",
-              bg: "bg-pink-500/8",
-            },
-            {
-              label: "找搭子",
-              count: listings?.filter((l) => l.category === "找搭子").length ?? 0,
-              icon: Users,
-              color: "text-sky-400",
-              bg: "bg-sky-500/8",
-            },
-            {
-              label: "公会宣传",
-              count: listings?.filter((l) => l.category === "公会宣传").length ?? 0,
-              icon: Shield,
-              color: "text-amber-400",
-              bg: "bg-amber-500/8",
-            },
-            {
-              label: "卖号",
-              count: listings?.filter((l) => l.category === "卖号").length ?? 0,
-              icon: Gamepad2,
-              color: "text-violet-400",
-              bg: "bg-violet-500/8",
-            },
+            { label: "陪聊", count: listings.filter(l => l.category === "陪聊").length, icon: MessageCircle, color: "text-pink-400", bg: "bg-pink-500/8" },
+            { label: "找搭子", count: listings.filter(l => l.category === "找搭子").length, icon: Users, color: "text-sky-400", bg: "bg-sky-500/8" },
+            { label: "公会宣传", count: listings.filter(l => l.category === "公会宣传").length, icon: Shield, color: "text-amber-400", bg: "bg-amber-500/8" },
+            { label: "卖号", count: listings.filter(l => l.category === "卖号").length, icon: Gamepad2, color: "text-violet-400", bg: "bg-violet-500/8" },
           ].map((stat) => (
-            <div
-              key={stat.label}
-              className="glow-border rounded-xl bg-[#111118] p-4"
-            >
+            <div key={stat.label} className="glow-border rounded-xl bg-[#111118] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${stat.bg}`}>
                   <stat.icon className={`h-4 w-4 ${stat.color}`} />
                 </div>
                 <span className="text-xs text-zinc-500">{stat.label}</span>
               </div>
-              <p className={`text-2xl font-bold ${stat.color}`}>
-                {isLoading ? "-" : stat.count}
-              </p>
+              <p className={`text-2xl font-bold ${stat.color}`}>{isLoading ? "-" : stat.count}</p>
             </div>
           ))}
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+            {error}
+            <button onClick={loadListings} className="ml-3 underline">重试</button>
+          </div>
+        )}
 
         {/* Listings */}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="glow-border rounded-xl bg-[#111118] p-5 animate-pulse"
-              >
+              <div key={i} className="glow-border rounded-xl bg-[#111118] p-5 animate-pulse">
                 <div className="h-5 bg-white/5 rounded w-1/3 mb-3" />
                 <div className="h-4 bg-white/5 rounded w-2/3 mb-2" />
                 <div className="h-4 bg-white/5 rounded w-1/2" />
               </div>
             ))}
           </div>
-        ) : listings && listings.length > 0 ? (
+        ) : listings.length > 0 ? (
           <div className="space-y-3">
             {listings.map((listing) => (
               <button
@@ -200,23 +190,17 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-
-                <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">
-                  {listing.description}
-                </p>
-
+                <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">{listing.description}</p>
                 <div className="flex items-center gap-4 text-xs text-zinc-600">
-                  {listing.serverName && (
+                  {listing.server_name && (
                     <span className="flex items-center gap-1">
                       <Server className="h-3 w-3" />
-                      {listing.serverName}
+                      {listing.server_name}
                     </span>
                   )}
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {listing.createdAt
-                      ? new Date(listing.createdAt).toLocaleDateString("zh-CN")
-                      : ""}
+                    {listing.created_at ? new Date(listing.created_at).toLocaleDateString("zh-CN") : ""}
                   </span>
                   <span className="flex items-center gap-1 text-emerald-500/70 ml-auto group-hover:text-emerald-400 transition-colors">
                     <Eye className="h-3 w-3" />
@@ -231,18 +215,11 @@ export default function Home() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 mb-4">
               <Gamepad2 className="h-8 w-8 text-zinc-600" />
             </div>
-            <h3 className="text-lg font-medium text-zinc-400 mb-1">
-              暂无帖子
-            </h3>
-            <p className="text-sm text-zinc-600 mb-6">
-              成为第一个发布的人吧
-            </p>
+            <h3 className="text-lg font-medium text-zinc-400 mb-1">暂无帖子</h3>
+            <p className="text-sm text-zinc-600 mb-6">成为第一个发布的人吧</p>
             <Button
               onClick={() => {
-                if (myListing) {
-                  alert("你已经发布过帖子了");
-                  return;
-                }
+                if (myListing) { alert("你已经发布过帖子了"); return; }
                 navigate("/create");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
