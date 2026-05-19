@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { getAllListings, checkPublisherListing, type Listing } from "@/lib/turso";
 import { formatRelativeTime } from "@/lib/time";
-import Sidebar from "@/components/Sidebar";
+import SiteNavPanel from "@/components/SiteNavPanel";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -82,25 +82,30 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Sidebar onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+              <Gamepad2 className="h-5 w-5 text-emerald-400" />
+            </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">游戏服务广场</h1>
               <p className="text-[11px] text-zinc-500 leading-none">陪聊 · 找搭子 · 公会宣传 · 卖号</p>
             </div>
           </div>
-          <Button
-            onClick={() => {
-              if (myListing) {
-                alert("你已经发布过帖子了，每个人只能发布一个");
-                return;
-              }
-              navigate("/create");
-            }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-9 px-4 text-sm"
-          >
-            <Plus className="h-4 w-4" />
-            发布
-          </Button>
+          <div className="flex items-center gap-2">
+            <SiteNavPanel />
+            <Button
+              onClick={() => {
+                if (myListing) {
+                  alert("你已经发布过帖子了，每个人只能发布一个");
+                  return;
+                }
+                navigate("/create");
+              }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-9 px-4 text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              发布
+            </Button>
+          </div>
         </div>
       </header>
 
