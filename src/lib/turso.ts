@@ -108,6 +108,39 @@ export async function createListing(data: {
   });
 }
 
+export async function updateListing(id: number, data: {
+  category: string;
+  title: string;
+  description: string;
+  serverName?: string;
+  price?: string;
+  contactType: string;
+  contactValue: string;
+  image?: string;
+}): Promise<void> {
+  await db.execute({
+    sql: `UPDATE listings SET category = ?, title = ?, description = ?, server_name = ?, price = ?, contact_type = ?, contact_value = ?, image = ? WHERE id = ?`,
+    args: [
+      data.category,
+      data.title,
+      data.description,
+      data.serverName || null,
+      data.price || null,
+      data.contactType,
+      data.contactValue,
+      data.image || null,
+      id,
+    ],
+  });
+}
+
+export async function deleteListing(id: number): Promise<void> {
+  await db.execute({
+    sql: "DELETE FROM listings WHERE id = ?",
+    args: [id],
+  });
+}
+
 export async function checkPublisherListing(publisherId: string): Promise<Listing | null> {
   const result = await db.execute({
     sql: "SELECT * FROM listings WHERE publisher_id = ? LIMIT 1",
