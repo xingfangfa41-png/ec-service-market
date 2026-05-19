@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { getAllListings, checkPublisherListing, type Listing } from "@/lib/turso";
 import { formatRelativeTime } from "@/lib/time";
+import Sidebar from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -81,9 +82,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
-              <Gamepad2 className="h-5 w-5 text-emerald-400" />
-            </div>
+            <Sidebar onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">游戏服务广场</h1>
               <p className="text-[11px] text-zinc-500 leading-none">陪聊 · 找搭子 · 公会宣传 · 卖号</p>
@@ -107,7 +106,7 @@ export default function Home() {
 
       {/* Main */}
       <main className="mx-auto max-w-6xl px-4 py-6">
-        {/* Category Filter */}
+        {/* Category Quick Filter */}
         <div className="mb-6 flex flex-wrap gap-2">
           {categories.map((cat) => (
             <button
