@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { getListingById, type Listing } from "@/lib/turso";
+import { formatRelativeTime } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -14,6 +15,7 @@ import {
   Tag,
   Copy,
   Check,
+  ImageIcon,
 } from "lucide-react";
 
 const categoryIconMap: Record<string, React.ElementType> = {
@@ -86,6 +88,7 @@ export default function ListingDetail() {
 
       <main className="mx-auto max-w-2xl px-4 py-6">
         <div className="glow-border rounded-xl bg-[#111118] p-6">
+          {/* Category + Price */}
           <div className="flex items-center gap-3 mb-4">
             <span className={`category-badge ${categoryClassMap[listing.category] || ""}`}>
               <CategoryIcon className="h-3.5 w-3.5" />
@@ -101,8 +104,10 @@ export default function ListingDetail() {
             )}
           </div>
 
+          {/* Title */}
           <h1 className="text-xl font-bold text-white mb-4">{listing.title}</h1>
 
+          {/* Meta */}
           <div className="flex items-center gap-4 text-xs text-zinc-500 mb-6 pb-4 border-b border-white/5">
             {listing.server_name && (
               <span className="flex items-center gap-1">
@@ -110,17 +115,35 @@ export default function ListingDetail() {
                 {listing.server_name}
               </span>
             )}
+            {listing.image && (
+              <span className="flex items-center gap-1">
+                <ImageIcon className="h-3.5 w-3.5" />
+                有图片
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {listing.created_at ? new Date(listing.created_at).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+              {formatRelativeTime(listing.created_at)}
             </span>
           </div>
 
+          {/* Description */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-zinc-400 mb-2">描述</h3>
             <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{listing.description}</p>
           </div>
 
+          {/* Image */}
+          {listing.image && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-zinc-400 mb-2">截图</h3>
+              <div className="rounded-xl overflow-hidden border border-white/5 bg-[#0d0d12]">
+                <img src={listing.image} alt="Screenshot" className="w-full max-h-96 object-contain" />
+              </div>
+            </div>
+          )}
+
+          {/* Contact */}
           <div className="rounded-xl bg-[#0d0d12] border border-white/5 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Eye className="h-4 w-4 text-emerald-400" />

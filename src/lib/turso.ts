@@ -19,6 +19,7 @@ export interface Listing {
   contact_value: string;
   publisher_id: string;
   created_at: string;
+  image: string | null;
 }
 
 export async function getAllListings(category?: string): Promise<Listing[]> {
@@ -38,6 +39,7 @@ export async function getAllListings(category?: string): Promise<Listing[]> {
       contact_value: row.contact_value as string,
       publisher_id: row.publisher_id as string,
       created_at: row.created_at as string,
+      image: row.image as string | null,
     }));
   }
   const result = await db.execute("SELECT * FROM listings ORDER BY created_at DESC");
@@ -52,6 +54,7 @@ export async function getAllListings(category?: string): Promise<Listing[]> {
     contact_value: row.contact_value as string,
     publisher_id: row.publisher_id as string,
     created_at: row.created_at as string,
+    image: row.image as string | null,
   }));
 }
 
@@ -73,6 +76,7 @@ export async function getListingById(id: number): Promise<Listing | null> {
     contact_value: row.contact_value as string,
     publisher_id: row.publisher_id as string,
     created_at: row.created_at as string,
+    image: row.image as string | null,
   };
 }
 
@@ -85,10 +89,11 @@ export async function createListing(data: {
   contactType: string;
   contactValue: string;
   publisherId: string;
+  image?: string;
 }): Promise<void> {
   await db.execute({
-    sql: `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       data.category,
       data.title,
@@ -98,6 +103,7 @@ export async function createListing(data: {
       data.contactType,
       data.contactValue,
       data.publisherId,
+      data.image || null,
     ],
   });
 }
@@ -120,5 +126,6 @@ export async function checkPublisherListing(publisherId: string): Promise<Listin
     contact_value: row.contact_value as string,
     publisher_id: row.publisher_id as string,
     created_at: row.created_at as string,
+    image: row.image as string | null,
   };
 }

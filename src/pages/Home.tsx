@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { getAllListings, checkPublisherListing, type Listing } from "@/lib/turso";
+import { formatRelativeTime } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -12,6 +13,7 @@ import {
   Clock,
   Server,
   Tag,
+  ImageIcon,
 } from "lucide-react";
 
 const categories = [
@@ -191,6 +193,12 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">{listing.description}</p>
+                {/* Image preview in list */}
+                {listing.image && (
+                  <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-[#0d0d12] max-h-40">
+                    <img src={listing.image} alt="" className="w-full h-full object-contain max-h-40" loading="lazy" />
+                  </div>
+                )}
                 <div className="flex items-center gap-4 text-xs text-zinc-600">
                   {listing.server_name && (
                     <span className="flex items-center gap-1">
@@ -198,9 +206,15 @@ export default function Home() {
                       {listing.server_name}
                     </span>
                   )}
+                  {listing.image && (
+                    <span className="flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3" />
+                      有图
+                    </span>
+                  )}
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {listing.created_at ? new Date(listing.created_at).toLocaleDateString("zh-CN") : ""}
+                    {formatRelativeTime(listing.created_at)}
                   </span>
                   <span className="flex items-center gap-1 text-emerald-500/70 ml-auto group-hover:text-emerald-400 transition-colors">
                     <Eye className="h-3 w-3" />
