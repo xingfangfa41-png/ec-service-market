@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
-  LayoutGrid,
+  Undo2,
   BarChart3,
   Palette,
   X,
   ExternalLink,
-  ChevronRight,
+  LayoutGrid,
 } from "lucide-react";
 
 const navItems = [
@@ -35,13 +35,13 @@ export default function SiteNavPanel() {
 
   return (
     <>
-      {/* Nav Button - same size as publish button */}
+      {/* Return Button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] text-sm font-medium transition-all duration-200"
+        className="flex items-center justify-center gap-1.5 h-9 w-9 rounded-lg bg-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-all duration-200"
+        title="返回其他页面"
       >
-        <LayoutGrid className="h-4 w-4" />
-        <span className="hidden sm:inline">导航</span>
+        <Undo2 className="h-4 w-4" />
       </button>
 
       {/* Overlay */}
