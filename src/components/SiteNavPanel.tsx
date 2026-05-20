@@ -62,6 +62,7 @@ export default function SiteNavPanel() {
         className="fixed bottom-0 left-0 right-0 z-[1000] transition-transform duration-300 ease-out"
         style={{
           transform: open ? "translateY(0)" : "translateY(100%)",
+          touchAction: "pan-y",
         }}
       >
         <div className="bg-[#161620] border-t border-white/[0.08] rounded-t-2xl">
