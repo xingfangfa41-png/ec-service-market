@@ -48,20 +48,22 @@ export default function SiteNavPanel() {
 
       {/* Overlay - always in DOM, controlled by opacity and visibility */}
       <div
-        className="fixed inset-0 z-[999] bg-black/60 transition-opacity duration-300"
+        className="fixed inset-0 z-[999] bg-black/60"
         style={{
           opacity: open ? 1 : 0,
           visibility: open ? "visible" : "hidden",
           pointerEvents: open ? "auto" : "none",
+          transition: "opacity 0.2s ease",
         }}
         onClick={close}
       />
 
       {/* Bottom Sheet - always in DOM, controlled by transform */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[1000] transition-transform duration-300 ease-out"
+        className="fixed bottom-0 left-0 right-0 z-[1000]"
         style={{
           transform: open ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 0.25s cubic-bezier(0.32,0.72,0,1)",
           touchAction: "pan-y",
         }}
       >
