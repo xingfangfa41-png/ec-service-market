@@ -22,7 +22,7 @@ const navItems = [
     desc: "玩家创作展示",
   },
   {
-    label: "Handbook",
+    label: "水晶战争玩家手册",
     href: "https://ec-crystal-war.com/handbook.html",
     icon: BookOpen,
     desc: "玩家手册指南",
