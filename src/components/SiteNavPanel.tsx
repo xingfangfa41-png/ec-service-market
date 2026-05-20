@@ -52,15 +52,11 @@ export default function SiteNavPanel() {
           {/* Overlay */}
           <div
             className="fixed inset-0 z-[999] bg-black/60"
-            style={{ animation: "fadeIn 0.2s ease" }}
             onClick={close}
           />
 
           {/* Bottom Sheet */}
-          <div
-            className="fixed bottom-0 left-0 right-0 z-[1000]"
-            style={{ animation: "slideUp 0.25s cubic-bezier(0.32,0.72,0,1)" }}
-          >
+          <div className="fixed bottom-0 left-0 right-0 z-[1000]">
             <div className="bg-[#161620] border-t border-white/[0.08] rounded-t-2xl">
               {/* Handle */}
               <div
