@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Undo2,
   BarChart3,
   Palette,
-  X,
   ExternalLink,
   LayoutGrid,
+  ChevronDown,
 } from "lucide-react";
 
 const navItems = [
@@ -32,108 +32,106 @@ const navItems = [
 
 export default function SiteNavPanel() {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const close = () => setOpen(false);
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
 
   return (
-    <>
-      {/* Return Button - only this is visible by default */}
+    <div ref={ref} className="relative">
+      {/* Toggle Button */}
       <button
-        onClick={() => setOpen(true)}
-        className="flex items-center justify-center h-9 w-9 rounded-lg bg-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-all duration-200"
-        title="返回其他页面"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-all duration-200 text-sm"
       >
         <Undo2 className="h-4 w-4" />
+        <span>跳转</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
-      {/* Panel - ONLY rendered when open is true */}
+      {/* Dropdown Panel */}
       {open && (
-        <>
-          {/* Overlay */}
-          <div
-            className="fixed inset-0 z-[999] bg-black/60"
-            onClick={close}
-          />
+        <div className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#161620] shadow-2xl shadow-black/50 overflow-hidden">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-white/[0.06]">
+            <p className="text-sm font-semibold text-[#e8e4dc]">跳转页面</p>
+            <p className="text-xs text-[#5a5448] mt-0.5">选择要前往的页面</p>
+          </div>
 
-          {/* Bottom Sheet */}
-          <div className="fixed bottom-0 left-0 right-0 z-[1000]">
-            <div className="bg-[#161620] border-t border-white/[0.08] rounded-t-2xl">
-              {/* Handle */}
-              <div
-                className="flex justify-center pt-3 pb-1 cursor-pointer"
-                onClick={close}
-              >
-                <div className="w-10 h-1 rounded-full bg-white/20" />
-              </div>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3">
-                <h2 className="text-base font-bold text-[#e8e4dc]">跳转页面</h2>
-                <button
-                  onClick={close}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] text-[#8a8478] hover:text-[#e8e4dc] hover:bg-white/[0.1] transition-all"
+          {/* Options */}
+          <div className="p-2 space-y-1">
+            {navItems.map((item) => {
+              const isActive = item.active;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target={isActive ? undefined : "_blank"}
+                  rel={isActive ? undefined : "noopener noreferrer"}
+                  onClick={(e) => {
+                    if (isActive) {
+                      e.preventDefault();
+                      setOpen(false);
+                    }
+                  }}
+                  className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-150 ${
+                    isActive
+                      ? "bg-emerald-500/[0.08] text-emerald-400 cursor-default"
+                      : "text-[#e8e4dc] hover:bg-white/[0.05] active:bg-white/[0.08]"
+                  }`}
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Options */}
-              <div className="px-4 pb-4 space-y-2">
-                {navItems.map((item) => {
-                  const isActive = item.active;
-                  return (
-                    <a
-                      key={item.label}
-                      href={item.href}
-                      target={isActive ? undefined : "_blank"}
-                      rel={isActive ? undefined : "noopener noreferrer"}
-                      onClick={(e) => {
-                        if (isActive) {
-                          e.preventDefault();
-                          close();
-                        }
-                      }}
-                      className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 ${
-                        isActive
-                          ? "bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-400"
-                          : "bg-white/[0.02] border-white/[0.06] text-[#e8e4dc] active:bg-white/[0.06]"
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 ${
+                      isActive
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-white/[0.05] text-[#8a8478]"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p
+                      className={`text-xs mt-0.5 ${
+                        isActive ? "text-emerald-400/60" : "text-[#5a5448]"
                       }`}
                     >
-                      <div
-                        className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                          isActive
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "bg-white/[0.05] text-[#8a8478]"
-                        }`}
-                      >
-                        <item.icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-medium">{item.label}</p>
-                        <p className={`text-xs mt-0.5 ${isActive ? "text-emerald-400/60" : "text-[#5a5448]"}`}>
-                          {item.desc}
-                        </p>
-                      </div>
-                      {isActive ? (
-                        <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          当前
-                        </span>
-                      ) : (
-                        <ExternalLink className="h-4 w-4 text-[#5a5448] flex-shrink-0" />
-                      )}
-                    </a>
-                  );
-                })}
-              </div>
-
-              {/* Footer */}
-              <p className="text-center text-[11px] text-[#5a5448] pb-4">
-                EC玩家社群站 · 东河 · 2026
-              </p>
-            </div>
+                      {item.desc}
+                    </p>
+                  </div>
+                  {isActive ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
+                      当前
+                    </span>
+                  ) : (
+                    <ExternalLink className="h-3.5 w-3.5 text-[#5a5448] flex-shrink-0" />
+                  )}
+                </a>
+              );
+            })}
           </div>
-        </>
+
+          {/* Footer */}
+          <div className="px-4 py-2.5 border-t border-white/[0.06] bg-white/[0.02]">
+            <p className="text-center text-[10px] text-[#5a5448]">
+              EC玩家社群站 · 东河 · 2026
+            </p>
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 }
