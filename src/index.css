@@ -106,3 +106,22 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(240 6% 30%);
 }
+
+/* SiteNavPanel animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
