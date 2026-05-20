@@ -37,7 +37,7 @@ export default function SiteNavPanel() {
 
   return (
     <>
-      {/* Return Button */}
+      {/* Return Button - only this is visible by default */}
       <button
         onClick={() => setOpen(true)}
         className="flex items-center justify-center h-9 w-9 rounded-lg bg-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-all duration-200"
@@ -46,102 +46,98 @@ export default function SiteNavPanel() {
         <Undo2 className="h-4 w-4" />
       </button>
 
-      {/* Overlay - always in DOM, controlled by opacity and visibility */}
-      <div
-        className="fixed inset-0 z-[999] bg-black/60"
-        style={{
-          opacity: open ? 1 : 0,
-          visibility: open ? "visible" : "hidden",
-          pointerEvents: open ? "auto" : "none",
-          transition: "opacity 0.2s ease",
-        }}
-        onClick={close}
-      />
-
-      {/* Bottom Sheet - always in DOM, controlled by transform */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-[1000]"
-        style={{
-          transform: open ? "translateY(0)" : "translateY(100%)",
-          transition: "transform 0.25s cubic-bezier(0.32,0.72,0,1)",
-          touchAction: "pan-y",
-        }}
-      >
-        <div className="bg-[#161620] border-t border-white/[0.08] rounded-t-2xl">
-          {/* Handle */}
+      {/* Panel - ONLY rendered when open is true */}
+      {open && (
+        <>
+          {/* Overlay */}
           <div
-            className="flex justify-center pt-3 pb-1 cursor-pointer"
+            className="fixed inset-0 z-[999] bg-black/60"
+            style={{ animation: "fadeIn 0.2s ease" }}
             onClick={close}
+          />
+
+          {/* Bottom Sheet */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[1000]"
+            style={{ animation: "slideUp 0.25s cubic-bezier(0.32,0.72,0,1)" }}
           >
-            <div className="w-10 h-1 rounded-full bg-white/20" />
-          </div>
+            <div className="bg-[#161620] border-t border-white/[0.08] rounded-t-2xl">
+              {/* Handle */}
+              <div
+                className="flex justify-center pt-3 pb-1 cursor-pointer"
+                onClick={close}
+              >
+                <div className="w-10 h-1 rounded-full bg-white/20" />
+              </div>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3">
-            <h2 className="text-base font-bold text-[#e8e4dc]">跳转页面</h2>
-            <button
-              onClick={close}
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] text-[#8a8478] hover:text-[#e8e4dc] hover:bg-white/[0.1] transition-all"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Options */}
-          <div className="px-4 pb-4 space-y-2">
-            {navItems.map((item) => {
-              const isActive = item.active;
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  target={isActive ? undefined : "_blank"}
-                  rel={isActive ? undefined : "noopener noreferrer"}
-                  onClick={(e) => {
-                    if (isActive) {
-                      e.preventDefault();
-                      close();
-                    }
-                  }}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 ${
-                    isActive
-                      ? "bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-400"
-                      : "bg-white/[0.02] border-white/[0.06] text-[#e8e4dc] active:bg-white/[0.06]"
-                  }`}
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3">
+                <h2 className="text-base font-bold text-[#e8e4dc]">跳转页面</h2>
+                <button
+                  onClick={close}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] text-[#8a8478] hover:text-[#e8e4dc] hover:bg-white/[0.1] transition-all"
                 >
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                      isActive
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : "bg-white/[0.05] text-[#8a8478]"
-                    }`}
-                  >
-                    <item.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium">{item.label}</p>
-                    <p className={`text-xs mt-0.5 ${isActive ? "text-emerald-400/60" : "text-[#5a5448]"}`}>
-                      {item.desc}
-                    </p>
-                  </div>
-                  {isActive ? (
-                    <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      当前
-                    </span>
-                  ) : (
-                    <ExternalLink className="h-4 w-4 text-[#5a5448] flex-shrink-0" />
-                  )}
-                </a>
-              );
-            })}
-          </div>
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-          {/* Footer */}
-          <p className="text-center text-[11px] text-[#5a5448] pb-4">
-            EC玩家社群站 · 东河 · 2026
-          </p>
-        </div>
-      </div>
+              {/* Options */}
+              <div className="px-4 pb-4 space-y-2">
+                {navItems.map((item) => {
+                  const isActive = item.active;
+                  return (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target={isActive ? undefined : "_blank"}
+                      rel={isActive ? undefined : "noopener noreferrer"}
+                      onClick={(e) => {
+                        if (isActive) {
+                          e.preventDefault();
+                          close();
+                        }
+                      }}
+                      className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 ${
+                        isActive
+                          ? "bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-400"
+                          : "bg-white/[0.02] border-white/[0.06] text-[#e8e4dc] active:bg-white/[0.06]"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                          isActive
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : "bg-white/[0.05] text-[#8a8478]"
+                        }`}
+                      >
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-medium">{item.label}</p>
+                        <p className={`text-xs mt-0.5 ${isActive ? "text-emerald-400/60" : "text-[#5a5448]"}`}>
+                          {item.desc}
+                        </p>
+                      </div>
+                      {isActive ? (
+                        <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          当前
+                        </span>
+                      ) : (
+                        <ExternalLink className="h-4 w-4 text-[#5a5448] flex-shrink-0" />
+                      )}
+                    </a>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <p className="text-center text-[11px] text-[#5a5448] pb-4">
+                EC玩家社群站 · 东河 · 2026
+              </p>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
