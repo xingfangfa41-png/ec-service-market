@@ -1,10 +1,8 @@
 {
-  "buildCommand": "npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js='import { createRequire } from \"module\";const require = createRequire(import.meta.url);'",
-  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/trpc/(.*)",
-      "destination": "/api/route?path=$1"
+      "destination": "/api?path=$1"
     }
   ]
 }
