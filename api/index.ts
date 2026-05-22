@@ -101,7 +101,8 @@ export default async function handler(request) {
       }
       const pubCheck = await executeSql("SELECT id FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       if (!pubCheck[0]?.rows?.length) await executeSql("INSERT INTO publishers (fingerprint) VALUES (?)", [publisherId]);
-      await executeSql(`INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`, [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId]);
+      const imageValue = body.image || null;
+      await executeSql(`INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId, imageValue]);
       await executeSql("UPDATE publishers SET last_posted_at = ? WHERE fingerprint = ?", [new Date().toISOString(), publisherId]);
       return json({ result: { data: { success: true } } });
     }
