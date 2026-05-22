@@ -36,7 +36,7 @@ function toListing(row) {
 }
 
 // Only select needed columns, exclude large fields from list view
-const LIST_COLUMNS = "id, category, title, description, server_name, price, contact_type, contact_value, publisher_id, created_at";
+const LIST_COLUMNS = "id, category, title, description, server_name, price, contact_type, contact_value, publisher_id, created_at, image";
 
 export default async function handler(request) {
   const url = new URL(request.url);
