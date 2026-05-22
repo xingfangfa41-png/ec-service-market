@@ -46,8 +46,8 @@ export const appRouter = createRouter({
 
   listing: createRouter({
     list: publicQuery
-      .input(z.object({ category: z.string().optional() }).optional())
-      .query(({ input }) => findAllListings(input?.category)),
+      .input(z.object({ category: z.string().optional() }).optional().nullable())
+      .query(({ input }) => findAllListings(input?.category ?? undefined)),
 
     getById: publicQuery
       .input(z.object({ id: z.number() }))
