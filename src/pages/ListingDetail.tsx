@@ -322,6 +322,23 @@ export default function ListingDetail() {
                 <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{listing.description}</p>
               </div>
 
+              {/* Image */}
+              {listing.image && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-zinc-400 mb-2">截图</h3>
+                  <div className="rounded-xl overflow-hidden border border-white/5 bg-[#0d0d12]">
+                    <img 
+                      src={listing.image} 
+                      alt="帖子图片" 
+                      className="w-full max-h-96 object-contain"
+                      loading="lazy"
+                      onClick={() => window.open(listing.image, '_blank')}
+                      style={{cursor: 'zoom-in'}}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Contact */}
               <div className="rounded-xl bg-[#0d0d12] border border-white/5 p-4">
                 <div className="flex items-center gap-2 mb-3">
