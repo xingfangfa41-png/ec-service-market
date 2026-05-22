@@ -1,9 +1,7 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter } from "./router.js";
-import { createContext } from "./context.js";
+import { appRouter } from "../router.js";
+import { createContext } from "../context.js";
 
-// Vercel Edge Runtime entry point
-// This file is automatically routed to /api/trpc by Vercel
 export default async function handler(request: Request) {
   try {
     return await fetchRequestHandler({
