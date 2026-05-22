@@ -154,12 +154,21 @@ export const trpc = {
     },
     update: {
       useMutation: (opts?: any) => {
+        const [isPending, setPending] = useState(false);
         const mutate = async (body: any) => {
-          const res = await post("listing.update", body);
-          opts?.onSuccess?.();
-          return res;
+          setPending(true);
+          try {
+            const res = await post("listing.update", body);
+            opts?.onSuccess?.();
+            return res;
+          } catch (err: any) {
+            opts?.onError?.(err);
+            throw err;
+          } finally {
+            setPending(false);
+          }
         };
-        return { mutate, isPending: false };
+        return { mutate, isPending };
       },
     },
   },
