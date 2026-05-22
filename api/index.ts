@@ -10,7 +10,6 @@ function json(data, status = 200) {
   });
 }
 
-// Turso returns cells as {type, value} objects - extract raw values
 function val(cell) {
   if (cell === null || cell === undefined) return null;
   if (typeof cell === "object") {
@@ -36,6 +35,9 @@ function toListing(row) {
   };
 }
 
+// Only select needed columns, exclude large fields from list view
+const LIST_COLUMNS = "id, category, title, description, server_name, price, contact_type, contact_value, publisher_id, created_at";
+
 export default async function handler(request) {
   const url = new URL(request.url);
   const path = url.searchParams.get("path") || "";
@@ -46,11 +48,11 @@ export default async function handler(request) {
       let results;
       if (category && category !== "all") {
         results = await executeSql(
-          "SELECT * FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100",
+          `SELECT ${LIST_COLUMNS} FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100`,
           [category]
         );
       } else {
-        results = await executeSql("SELECT * FROM listings ORDER BY created_at DESC LIMIT 100");
+        results = await executeSql(`SELECT ${LIST_COLUMNS} FROM listings ORDER BY created_at DESC LIMIT 100`);
       }
       const rows = results[0]?.rows || [];
       return json({ result: { data: rows.map(toListing) } });
