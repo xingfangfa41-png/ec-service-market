@@ -1,19 +1,9 @@
 {
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/trpc/(.*)",
       "destination": "/api?path=$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "s-maxage=0"
-        }
-      ]
     }
   ]
 }
