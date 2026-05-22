@@ -1,3 +1,4 @@
+// Force rebuild 5299
 // REST API - Vercel Edge Runtime entry point
 // Handles all /api/trpc/* routes via vercel.json rewrite
 import { executeSql } from "./queries/connection.js";
