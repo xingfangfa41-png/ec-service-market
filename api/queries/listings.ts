@@ -39,13 +39,17 @@ function toListing(row: Record<string, any>): Listing {
 
 export async function findAllListings(category?: string): Promise<Listing[]> {
   let results;
+  const limit = 100;
   if (category && category !== "all") {
     results = await executeSql(
-      "SELECT * FROM listings WHERE category = ? ORDER BY created_at DESC",
-      [category]
+      "SELECT * FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT ?",
+      [category, limit]
     );
   } else {
-    results = await executeSql("SELECT * FROM listings ORDER BY created_at DESC");
+    results = await executeSql(
+      "SELECT * FROM listings ORDER BY created_at DESC LIMIT ?",
+      [limit]
+    );
   }
 
   if (!results.length) return [];
