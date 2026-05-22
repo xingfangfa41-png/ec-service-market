@@ -1,3 +1,4 @@
+// Build timestamp: 1779493618.1878507
 // Direct Turso HTTP API - works in Vercel Edge Runtime
 const TURSO_URL = process.env.TURSO_DATABASE_URL || "";
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
