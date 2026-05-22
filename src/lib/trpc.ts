@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+
 // Simple REST API client (replaces tRPC for Edge Runtime reliability)
 const API_BASE = "/api/trpc";
 
@@ -165,5 +167,3 @@ export const trpc = {
     invalidate: () => {},
   }),
 };
-
-import { useState, useEffect } from "react";
