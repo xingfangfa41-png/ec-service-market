@@ -10,6 +10,32 @@ function json(data, status = 200) {
   });
 }
 
+// Turso returns cells as {type, value} objects - extract raw values
+function val(cell) {
+  if (cell === null || cell === undefined) return null;
+  if (typeof cell === "object") {
+    if (cell.type === "null") return null;
+    return cell.value !== undefined ? cell.value : null;
+  }
+  return cell;
+}
+
+function toListing(row) {
+  return {
+    id: Number(val(row[0]) || 0),
+    category: String(val(row[1]) || ""),
+    title: String(val(row[2]) || ""),
+    description: String(val(row[3]) || ""),
+    serverName: val(row[4]),
+    price: val(row[5]),
+    contactType: String(val(row[6]) || ""),
+    contactValue: String(val(row[7]) || ""),
+    publisherId: String(val(row[8]) || ""),
+    createdAt: val(row[9]),
+    image: val(row[10]),
+  };
+}
+
 export default async function handler(request) {
   const url = new URL(request.url);
   const path = url.searchParams.get("path") || "";
@@ -26,39 +52,31 @@ export default async function handler(request) {
       } else {
         results = await executeSql("SELECT * FROM listings ORDER BY created_at DESC LIMIT 100");
       }
-      const { columns, rows } = results[0] || { columns: [], rows: [] };
-      const listings = rows.map((r) => ({
-        id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""),
-        description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null,
-        contactType: String(r[6] || ""), contactValue: String(r[7] || ""),
-        publisherId: String(r[8] || ""), image: r[10] || null, createdAt: r[9] || null,
-      }));
-      return json({ result: { data: listings } });
+      const rows = results[0]?.rows || [];
+      return json({ result: { data: rows.map(toListing) } });
     }
 
     if (path === "listing.getById") {
       const id = Number(url.searchParams.get("id"));
       if (!id) return json({ error: "Missing id" }, 400);
       const results = await executeSql("SELECT * FROM listings WHERE id = ?", [id]);
-      if (!results[0]?.rows?.length) return json({ result: { data: null } });
-      const r = results[0].rows[0];
-      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), publisherId: String(r[8] || ""), createdAt: r[9] || null, image: r[10] || null } } });
+      const rows = results[0]?.rows || [];
+      return json({ result: { data: rows.length ? toListing(rows[0]) : null } });
     }
 
     if (path === "listing.checkPublisher") {
       const publisherId = url.searchParams.get("publisherId");
       if (!publisherId) return json({ error: "Missing publisherId" }, 400);
       const results = await executeSql("SELECT * FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
-      if (!results[0]?.rows?.length) return json({ result: { data: null } });
-      const r = results[0].rows[0];
-      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), publisherId: String(r[8] || ""), createdAt: r[9] || null, image: r[10] || null } } });
+      const rows = results[0]?.rows || [];
+      return json({ result: { data: rows.length ? toListing(rows[0]) : null } });
     }
 
     if (path === "listing.cooldownStatus") {
       const publisherId = url.searchParams.get("publisherId");
       if (!publisherId) return json({ error: "Missing publisherId" }, 400);
       const results = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
-      const lastPosted = results[0]?.rows?.[0]?.[0];
+      const lastPosted = val(results[0]?.rows?.[0]?.[0]);
       if (!lastPosted) return json({ result: { data: { inCooldown: false, remainingSeconds: 0 } } });
       const elapsed = Date.now() - new Date(lastPosted).getTime();
       if (elapsed < COOLDOWN_MS) return json({ result: { data: { inCooldown: true, remainingSeconds: Math.ceil((COOLDOWN_MS - elapsed) / 1000) } } });
@@ -74,7 +92,7 @@ export default async function handler(request) {
       const existing = await executeSql("SELECT id FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
       if (existing[0]?.rows?.length) return json({ error: { message: "你已经发布过帖子了，每个人只能发布一个" } }, 400);
       const pubResults = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
-      const lastPosted = pubResults[0]?.rows?.[0]?.[0];
+      const lastPosted = val(pubResults[0]?.rows?.[0]?.[0]);
       if (lastPosted) {
         const elapsed = Date.now() - new Date(lastPosted).getTime();
         if (elapsed < COOLDOWN_MS) { const mins = Math.ceil((COOLDOWN_MS - elapsed) / 60000); return json({ error: { message: `发布太频繁，请等待 ${mins} 分钟后再试` } }, 400); }
@@ -91,7 +109,7 @@ export default async function handler(request) {
       const { id, publisherId } = body;
       const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
       if (!results[0]?.rows?.length) return json({ error: { message: "帖子不存在" } }, 400);
-      if (results[0].rows[0][0] !== publisherId) return json({ error: { message: "无权删除" } }, 400);
+      if (val(results[0].rows[0][0]) !== publisherId) return json({ error: { message: "无权删除" } }, 400);
       await executeSql("DELETE FROM listings WHERE id = ?", [id]);
       return json({ result: { data: { success: true } } });
     }
@@ -101,7 +119,7 @@ export default async function handler(request) {
       const { id, publisherId, category, title, description, serverName, price, contactType, contactValue } = body;
       const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
       if (!results[0]?.rows?.length) return json({ error: { message: "帖子不存在" } }, 400);
-      if (results[0].rows[0][0] !== publisherId) return json({ error: { message: "无权编辑" } }, 400);
+      if (val(results[0].rows[0][0]) !== publisherId) return json({ error: { message: "无权编辑" } }, 400);
       await executeSql(`UPDATE listings SET category = ?, title = ?, description = ?, server_name = ?, price = ?, contact_type = ?, contact_value = ? WHERE id = ?`, [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), id]);
       return json({ result: { data: { success: true } } });
     }
