@@ -38,6 +38,47 @@ function toListing(row) {
 // Only select needed columns, exclude large fields from list view
 const LIST_COLUMNS = "id, category, title, description, server_name, price, contact_type, contact_value, publisher_id, created_at, image";
 
+
+// Upload image to Cloudinary
+async function uploadToCloudinary(base64Image: string): Promise<string> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
+  const apiKey = process.env.CLOUDINARY_API_KEY || "";
+  const apiSecret = process.env.CLOUDINARY_API_SECRET || "";
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Cloudinary config missing");
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signatureStr = `timestamp=${timestamp}${apiSecret}`;
+
+  // SHA1 hash
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest("SHA-1", encoder.encode(signatureStr));
+  const signature = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  const formData = new FormData();
+  formData.append("file", base64Image);
+  formData.append("api_key", apiKey);
+  formData.append("timestamp", String(timestamp));
+  formData.append("signature", signature);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Cloudinary upload failed: ${err.slice(0, 200)}`);
+  }
+
+  const result = await res.json();
+  return result.secure_url;
+}
+
 export default async function handler(request) {
   const url = new URL(request.url);
   const path = url.searchParams.get("path") || "";
