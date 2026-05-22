@@ -126,6 +126,20 @@ export default async function handler(request) {
       return json({ result: { data: { inCooldown: false, remainingSeconds: 0 } } });
     }
 
+    // --- upload.image (POST) ---
+    if (path === "upload.image" && request.method === "POST") {
+      const body = await request.json();
+      const { image } = body;
+      if (!image) return json({ error: { message: "No image provided" } }, 400);
+      if (!image.startsWith("data:image/")) return json({ error: { message: "Invalid image format" } }, 400);
+      try {
+        const url = await uploadToCloudinary(image);
+        return json({ result: { data: { url } } });
+      } catch (err) {
+        return json({ error: { message: err?.message || "Upload failed" } }, 500);
+      }
+    }
+
     if (path === "listing.create" && request.method === "POST") {
       const body = await request.json();
       const { category, title, description, serverName, price, contactType, contactValue, publisherId } = body;
