@@ -17,6 +17,7 @@ export const listings = sqliteTable("listings", {
 export const publishers = sqliteTable("publishers", {
   id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
   fingerprint: text("fingerprint", { length: 255 }).notNull().unique(),
+  lastPostedAt: integer("last_posted_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 

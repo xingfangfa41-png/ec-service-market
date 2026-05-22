@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { getListingById, deleteListing, updateListing } from "@/lib/turso";
-import type { Listing } from "@/lib/turso";
+import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,12 +56,12 @@ const categories = [
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const listingId = parseInt(id ?? "0", 10);
+
   const [copied, setCopied] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [editError, setEditError] = useState("");
   const [editForm, setEditForm] = useState({
     category: "",
     title: "",
@@ -72,32 +71,51 @@ export default function ListingDetail() {
     contactType: "wechat" as "wechat" | "qq",
     contactValue: "",
   });
-  const listingId = parseInt(id ?? "0", 10);
 
   const fingerprint = localStorage.getItem("publisher_fp") || "";
-  const isOwner = listing ? listing.publisher_id === fingerprint : false;
 
-  useEffect(() => {
-    if (!listingId) return;
-    setIsLoading(true);
-    getListingById(listingId)
-      .then((data) => {
-        setListing(data);
-        if (data) {
-          setEditForm({
-            category: data.category,
-            title: data.title,
-            description: data.description,
-            serverName: data.server_name || "",
-            price: data.price || "",
-            contactType: data.contact_type as "wechat" | "qq",
-            contactValue: data.contact_value,
-          });
-        }
-      })
-      .catch(() => setListing(null))
-      .finally(() => setIsLoading(false));
-  }, [listingId]);
+  // tRPC queries & mutations
+  const { data: listing, isLoading } = trpc.listing.getById.useQuery(
+    { id: listingId },
+    { enabled: listingId > 0 }
+  );
+
+  const utils = trpc.useUtils();
+
+  const deleteMutation = trpc.listing.delete.useMutation({
+    onSuccess: () => {
+      navigate("/");
+    },
+  });
+
+  const updateMutation = trpc.listing.update.useMutation({
+    onSuccess: () => {
+      utils.listing.getById.invalidate({ id: listingId });
+      setIsEditing(false);
+      setEditError("");
+    },
+    onError: (err) => {
+      setEditError(err.message);
+    },
+  });
+
+  const isOwner = listing ? listing.publisherId === fingerprint : false;
+
+  // Initialize edit form when entering edit mode
+  const startEditing = () => {
+    if (!listing) return;
+    setEditForm({
+      category: listing.category,
+      title: listing.title,
+      description: listing.description,
+      serverName: listing.serverName || "",
+      price: listing.price || "",
+      contactType: listing.contactType as "wechat" | "qq",
+      contactValue: listing.contactValue,
+    });
+    setEditError("");
+    setIsEditing(true);
+  };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -105,36 +123,29 @@ export default function ListingDetail() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!listing) return;
-    setIsDeleting(true);
-    try {
-      await deleteListing(listing.id);
-      navigate("/");
-    } catch {
-      setIsDeleting(false);
-    }
+    deleteMutation.mutate({ id: listing.id, publisherId: fingerprint });
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!listing) return;
-    try {
-      await updateListing(listing.id, {
-        category: editForm.category,
-        title: editForm.title.trim(),
-        description: editForm.description.trim(),
-        serverName: editForm.serverName.trim() || undefined,
-        price: editForm.price.trim() || undefined,
-        contactType: editForm.contactType,
-        contactValue: editForm.contactValue.trim(),
-      });
-      // Refresh
-      const updated = await getListingById(listing.id);
-      setListing(updated);
-      setIsEditing(false);
-    } catch {
-      // error
-    }
+    const title = editForm.title.trim();
+    const description = editForm.description.trim();
+    if (title.length < 3) { setEditError("标题至少3个字符"); return; }
+    if (description.length < 10) { setEditError("描述至少10个字符"); return; }
+
+    updateMutation.mutate({
+      id: listing.id,
+      publisherId: fingerprint,
+      category: editForm.category,
+      title,
+      description,
+      serverName: editForm.serverName.trim() || undefined,
+      price: editForm.price.trim() || undefined,
+      contactType: editForm.contactType,
+      contactValue: editForm.contactValue.trim(),
+    });
   };
 
   if (isLoading) {
@@ -172,15 +183,15 @@ export default function ListingDetail() {
           {/* Owner actions */}
           {isOwner && !isEditing && (
             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-white/5">
-              <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}
+              <Button variant="ghost" size="sm" onClick={startEditing}
                 className="text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 gap-1.5 text-xs">
                 <Pencil className="h-3.5 w-3.5" />
                 编辑
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleDelete} disabled={isDeleting}
+              <Button variant="ghost" size="sm" onClick={handleDelete} disabled={deleteMutation.isPending}
                 className="text-zinc-400 hover:text-red-400 hover:bg-red-500/10 gap-1.5 text-xs">
                 <Trash2 className="h-3.5 w-3.5" />
-                {isDeleting ? "删除中..." : "删除"}
+                {deleteMutation.isPending ? "删除中..." : "删除"}
               </Button>
             </div>
           )}
@@ -196,6 +207,12 @@ export default function ListingDetail() {
                   取消
                 </Button>
               </div>
+
+              {editError && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                  {editError}
+                </div>
+              )}
 
               {/* Category */}
               <div className="space-y-2">
@@ -258,10 +275,10 @@ export default function ListingDetail() {
                 </div>
               </div>
 
-              <Button onClick={handleSave}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white h-10 gap-2">
+              <Button onClick={handleSave} disabled={updateMutation.isPending}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white h-10 gap-2 disabled:opacity-50">
                 <Save className="h-4 w-4" />
-                保存修改
+                {updateMutation.isPending ? "保存中..." : "保存修改"}
               </Button>
             </div>
           ) : (
@@ -287,21 +304,15 @@ export default function ListingDetail() {
 
               {/* Meta */}
               <div className="flex items-center gap-4 text-xs text-zinc-500 mb-6 pb-4 border-b border-white/5">
-                {listing.server_name && (
+                {listing.serverName && (
                   <span className="flex items-center gap-1">
                     <Server className="h-3.5 w-3.5" />
-                    {listing.server_name}
-                  </span>
-                )}
-                {listing.image && (
-                  <span className="flex items-center gap-1">
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    有图片
+                    {listing.serverName}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  {formatRelativeTime(listing.created_at)}
+                  {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
                 </span>
               </div>
 
@@ -310,16 +321,6 @@ export default function ListingDetail() {
                 <h3 className="text-sm font-semibold text-zinc-400 mb-2">描述</h3>
                 <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{listing.description}</p>
               </div>
-
-              {/* Image */}
-              {listing.image && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-zinc-400 mb-2">截图</h3>
-                  <div className="rounded-xl overflow-hidden border border-white/5 bg-[#0d0d12]">
-                    <img src={listing.image} alt="Screenshot" className="w-full max-h-96 object-contain" />
-                  </div>
-                </div>
-              )}
 
               {/* Contact */}
               <div className="rounded-xl bg-[#0d0d12] border border-white/5 p-4">
@@ -339,18 +340,18 @@ export default function ListingDetail() {
                     <div className="flex items-center justify-between rounded-lg bg-[#111118] border border-white/5 px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-                          {listing.contact_type === "wechat" ? (
+                          {listing.contactType === "wechat" ? (
                             <MessageCircle className="h-4 w-4 text-emerald-400" />
                           ) : (
                             <span className="text-xs font-bold text-emerald-400">Q</span>
                           )}
                         </div>
                         <div>
-                          <p className="text-xs text-zinc-500">{listing.contact_type === "wechat" ? "微信号" : "QQ号"}</p>
-                          <p className="text-base font-semibold text-white">{listing.contact_value}</p>
+                          <p className="text-xs text-zinc-500">{listing.contactType === "wechat" ? "微信号" : "QQ号"}</p>
+                          <p className="text-base font-semibold text-white">{listing.contactValue}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => handleCopy(listing.contact_value)}
+                      <Button variant="ghost" size="sm" onClick={() => handleCopy(listing.contactValue)}
                         className="text-zinc-400 hover:text-white hover:bg-white/5 gap-1">
                         {copied ? <><Check className="h-4 w-4 text-emerald-400" /><span className="text-emerald-400">已复制</span></>
                           : <><Copy className="h-4 w-4" />复制</>}

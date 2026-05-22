@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { getAllListings, checkPublisherListing, type Listing } from "@/lib/turso";
+import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
 import SiteNavPanel from "@/components/SiteNavPanel";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,21 @@ import {
   Tag,
   ImageIcon,
 } from "lucide-react";
+
+// Listing type matching backend Drizzle schema (camelCase)
+interface Listing {
+  id: number;
+  category: string;
+  title: string;
+  description: string;
+  serverName: string | null;
+  price: string | null;
+  contactType: string;
+  contactValue: string;
+  publisherId: string;
+  image: string | null;
+  createdAt: Date;
+}
 
 const categories = [
   { key: "all", label: "全部", icon: null },
@@ -39,11 +54,7 @@ function getCategoryBadgeClass(category: string) {
 export default function Home() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("all");
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
   const [fingerprint, setFingerprint] = useState("");
-  const [myListing, setMyListing] = useState<Listing | null>(null);
 
   // Generate fingerprint
   useEffect(() => {
@@ -52,29 +63,18 @@ export default function Home() {
     setFingerprint(fp);
   }, []);
 
-  // Check if user already has a listing
-  useEffect(() => {
-    if (!fingerprint) return;
-    checkPublisherListing(fingerprint).then(setMyListing).catch(() => {});
-  }, [fingerprint]);
+  // tRPC queries
+  const { data: listings = [], isLoading, error: rpcError, refetch } = trpc.listing.list.useQuery(
+    { category: activeCategory },
+    { enabled: true }
+  );
 
-  // Load listings
-  const loadListings = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const data = await getAllListings(activeCategory === "all" ? undefined : activeCategory);
-      setListings(data);
-    } catch (err: any) {
-      setError("加载失败: " + (err.message || "未知错误"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeCategory]);
+  const { data: myListing } = trpc.listing.checkPublisher.useQuery(
+    { publisherId: fingerprint },
+    { enabled: !!fingerprint }
+  );
 
-  useEffect(() => {
-    loadListings();
-  }, [loadListings]);
+  const error = rpcError ? "加载失败: " + rpcError.message : "";
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -153,7 +153,7 @@ export default function Home() {
         {error && (
           <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
             {error}
-            <button onClick={loadListings} className="ml-3 underline">重试</button>
+            <button onClick={() => refetch()} className="ml-3 underline">重试</button>
           </div>
         )}
 
@@ -204,10 +204,10 @@ export default function Home() {
                   </div>
                 )}
                 <div className="flex items-center gap-4 text-xs text-zinc-600">
-                  {listing.server_name && (
+                  {listing.serverName && (
                     <span className="flex items-center gap-1">
                       <Server className="h-3 w-3" />
-                      {listing.server_name}
+                      {listing.serverName}
                     </span>
                   )}
                   {listing.image && (
@@ -218,7 +218,7 @@ export default function Home() {
                   )}
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {formatRelativeTime(listing.created_at)}
+                    {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
                   </span>
                   <span className="flex items-center gap-1 text-emerald-500/70 ml-auto group-hover:text-emerald-400 transition-colors">
                     <Eye className="h-3 w-3" />
