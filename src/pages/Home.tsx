@@ -197,10 +197,11 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">{listing.description}</p>
-                {/* Image preview in list */}
-                {listing.image && (
-                  <div className="mb-3 rounded-lg overflow-hidden border border-white/5 bg-[#0d0d12] max-h-40">
-                    <img src={listing.image} alt="" className="w-full h-full object-contain max-h-40" loading="lazy" />
+                {/* Image indicator */}
+                {listing.image && listing.image.length > 10 && (
+                  <div className="mb-3 flex items-center gap-1.5 text-xs text-emerald-400">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>有图</span>
                   </div>
                 )}
                 <div className="flex items-center gap-4 text-xs text-zinc-600">
