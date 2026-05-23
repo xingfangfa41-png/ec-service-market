@@ -14,29 +14,43 @@ function val(cell) {
   if (cell === null || cell === undefined) return null;
   if (typeof cell === "object") {
     if (cell.type === "null") return null;
-    return cell.value !== undefined ? cell.value : null;
+    if (cell.value !== undefined) return cell.value;
+    // Handle Turso column name format
+    return null;
+  }
+  return cell;
+}
+
+// Extract raw value from Turso result row (handles {type, value} format)
+function extract(row, index) {
+  if (!row || index >= row.length) return null;
+  const cell = row[index];
+  if (cell === null || cell === undefined) return null;
+  if (typeof cell === "object" && cell.value !== undefined) {
+    if (cell.type === "null") return null;
+    return cell.value;
   }
   return cell;
 }
 
 function toListing(row) {
   return {
-    id: Number(val(row[0]) || 0),
-    category: String(val(row[1]) || ""),
-    title: String(val(row[2]) || ""),
-    description: String(val(row[3]) || ""),
-    serverName: val(row[4]),
-    price: val(row[5]),
-    contactType: String(val(row[6]) || ""),
-    contactValue: String(val(row[7]) || ""),
-    publisherId: String(val(row[8]) || ""),
-    createdAt: val(row[9]),
-    image: val(row[10]),
+    id: Number(extract(row, 0) || 0),
+    category: String(extract(row, 1) || ""),
+    title: String(extract(row, 2) || ""),
+    description: String(extract(row, 3) || ""),
+    serverName: extract(row, 4),
+    price: extract(row, 5),
+    contactType: String(extract(row, 6) || ""),
+    contactValue: String(extract(row, 7) || ""),
+    publisherId: String(extract(row, 8) || ""),
+    createdAt: extract(row, 9),
+    image: extract(row, 10),
   };
 }
 
 // Only select needed columns, exclude large fields from list view
-const LIST_COLUMNS = "id, category, title, description, server_name, price, contact_type, contact_value, publisher_id, created_at, image";
+const LIST_COLUMNS = "*";
 
 
 // Upload image to Cloudinary
