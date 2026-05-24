@@ -188,11 +188,16 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">{listing.description}</p>
-                {/* Image indicator */}
+                {/* Image display */}
                 {listing.image && listing.image.length > 10 && (
-                  <div className="mb-3 flex items-center gap-1.5 text-xs text-emerald-400">
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    <span>有图</span>
+                  <div className="mb-4 rounded-xl overflow-hidden border border-white/5 bg-[#0d0d14]">
+                    <img
+                      src={listing.image}
+                      alt={listing.title}
+                      className="w-full max-h-56 object-contain"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
                   </div>
                 )}
                 <div className="flex items-center gap-4 text-xs text-zinc-600">
@@ -200,12 +205,6 @@ export default function Home() {
                     <span className="flex items-center gap-1">
                       <Server className="h-3 w-3" />
                       {listing.serverName}
-                    </span>
-                  )}
-                  {listing.image && (
-                    <span className="flex items-center gap-1">
-                      <ImageIcon className="h-3 w-3" />
-                      有图
                     </span>
                   )}
                   <span className="flex items-center gap-1">
