@@ -72,7 +72,6 @@ export default function ListingDetail() {
     contactValue: "",
   });
 
-  const fingerprint = localStorage.getItem("publisher_fp") || "";
   const [isOwner, setIsOwner] = useState(false);
 
   // tRPC queries & mutations
@@ -84,9 +83,9 @@ export default function ListingDetail() {
   // Check ownership securely via backend (publisherId no longer exposed in API)
   const checkOwnerMutation = trpc.listing.checkOwner.useMutation();
   useEffect(() => {
-    if (listing && listingId > 0 && fingerprint) {
+    if (listing && listingId > 0) {
       checkOwnerMutation.mutate(
-        { id: listingId, publisherId: fingerprint },
+        { id: listingId },
         {
           onSuccess: (data) => {
             setIsOwner(data?.isOwner || false);
@@ -94,7 +93,7 @@ export default function ListingDetail() {
         }
       );
     }
-  }, [listing, listingId, fingerprint]);
+  }, [listing, listingId]);
 
   const utils = trpc.useUtils();
 
@@ -139,7 +138,7 @@ export default function ListingDetail() {
 
   const handleDelete = () => {
     if (!listing) return;
-    deleteMutation.mutate({ id: listing.id, publisherId: fingerprint });
+    deleteMutation.mutate({ id: listing.id });
   };
 
   const handleSave = () => {
@@ -151,7 +150,6 @@ export default function ListingDetail() {
 
     updateMutation.mutate({
       id: listing.id,
-      publisherId: fingerprint,
       category: editForm.category,
       title,
       description,

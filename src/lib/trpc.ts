@@ -3,11 +3,51 @@ import { useState, useEffect } from "react";
 // Simple REST API client (replaces tRPC for Edge Runtime reliability)
 const API_BASE = "/api/trpc";
 
+// Store signed token in memory and localStorage
+function getStoredToken() {
+  try {
+    const raw = localStorage.getItem("ec_token");
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function storeToken(token) {
+  localStorage.setItem("ec_token", JSON.stringify(token));
+}
+
+let cachedToken = getStoredToken();
+
+// Ensure we have a valid signed token from backend
+async function ensureToken() {
+  if (cachedToken?.publisherId && cachedToken?.signature) {
+    return cachedToken;
+  }
+  // Fetch new token from backend
+  const res = await fetch(`${API_BASE}/listing.getToken`);
+  const data = await res.json();
+  if (data.result?.data) {
+    cachedToken = {
+      publisherId: data.result.data.publisherId,
+      signature: data.result.data.signature,
+    };
+    storeToken(cachedToken);
+    return cachedToken;
+  }
+  throw new Error("Failed to get token");
+}
+
 async function get(path: string, params?: Record<string, string>) {
+  const token = await ensureToken();
   const url = new URL(API_BASE + "/" + path, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([k, v]) => { if (v) url.searchParams.set(k, v); });
   }
+  // Attach signature to query params
+  url.searchParams.set("publisherId", token.publisherId);
+  url.searchParams.set("signature", token.signature);
   const res = await fetch(url.toString());
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: { message: "请求失败" } }));
@@ -17,10 +57,15 @@ async function get(path: string, params?: Record<string, string>) {
 }
 
 async function post(path: string, body: any) {
+  const token = await ensureToken();
   const res = await fetch(API_BASE + "/" + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      ...body,
+      publisherId: token.publisherId,
+      signature: token.signature,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: { message: "请求失败" } }));
@@ -88,18 +133,17 @@ export const trpc = {
       },
     },
     cooldownStatus: {
-      useQuery: (input: { publisherId: string }, opts?: any) => {
+      useQuery: (opts?: any) => {
         const [data, setData] = useState<any>(null);
 
         const fetchData = async () => {
-          if (!input.publisherId) return;
           try {
-            const res = await get("listing.cooldownStatus", { publisherId: input.publisherId });
+            const res = await get("listing.cooldownStatus");
             setData(res.result?.data || { inCooldown: false, remainingSeconds: 0 });
           } catch { setData({ inCooldown: false, remainingSeconds: 0 }); }
         };
 
-        useEffect(() => { fetchData(); }, [input.publisherId]);
+        useEffect(() => { fetchData(); }, []);
 
         return { data };
       },

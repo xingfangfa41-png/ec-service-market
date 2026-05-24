@@ -54,19 +54,9 @@ export default function CreateListing() {
   const [canSubmit, setCanSubmit] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Get or create fingerprint
-  const fingerprint = (() => {
-    const fp = localStorage.getItem("publisher_fp") || crypto.randomUUID();
-    localStorage.setItem("publisher_fp", fp);
-    return fp;
-  })();
-
-
-
-  // Check cooldown status
+  // Check cooldown status (token with signature is auto-managed by trpc client)
   const { data: cooldownData, refetch: refetchCooldown } = trpc.listing.cooldownStatus.useQuery(
-    { publisherId: fingerprint },
-    { enabled: !!fingerprint, refetchInterval: cooldownSeconds > 0 ? 5000 : false }
+    { refetchInterval: cooldownSeconds > 0 ? 5000 : false }
   );
 
   // Cooldown countdown timer
@@ -187,7 +177,6 @@ export default function CreateListing() {
       price: price.trim() || undefined,
       contactType,
       contactValue: contactValue.trim(),
-      publisherId: fingerprint,
       image: image || undefined,
     });
   };

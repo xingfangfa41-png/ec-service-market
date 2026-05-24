@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
@@ -54,14 +54,6 @@ function getCategoryBadgeClass(category: string) {
 export default function Home() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("all");
-  const [fingerprint, setFingerprint] = useState("");
-
-  // Generate fingerprint
-  useEffect(() => {
-    const fp = localStorage.getItem("publisher_fp") || crypto.randomUUID();
-    localStorage.setItem("publisher_fp", fp);
-    setFingerprint(fp);
-  }, []);
 
   // tRPC queries
   const { data: listings = [], isLoading, error: rpcError, refetch } = trpc.listing.list.useQuery(
