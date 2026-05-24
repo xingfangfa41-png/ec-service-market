@@ -26,9 +26,9 @@ function extract(row, index) {
   if (!row || index >= row.length) return null;
   const cell = row[index];
   if (cell === null || cell === undefined) return null;
-  if (typeof cell === "object" && cell.value !== undefined) {
+  if (typeof cell === "object") {
     if (cell.type === "null") return null;
-    return cell.value;
+    if (cell.value !== undefined) return cell.value;
   }
   return cell;
 }
