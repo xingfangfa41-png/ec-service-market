@@ -331,7 +331,7 @@ export default function CreateListing() {
 
           {/* Security note */}
           <p className="text-xs text-zinc-700 text-center">
-            每人只能发布一个帖子，发布后有30分钟冷却时间
+            发布后有30分钟冷却时间
           </p>
         </form>
       </main>

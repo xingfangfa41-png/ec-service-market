@@ -8,7 +8,6 @@ import {
   deleteListing,
   findPublisherByFingerprint,
   createPublisher,
-  findListingByPublisherId,
   checkPublisherCooldown,
   updatePublisherLastPosted,
 } from "./queries/listings.js";
@@ -79,13 +78,7 @@ export const appRouter = createRouter({
           throw new Error("内容包含不允许的关键词或链接");
         }
 
-        // 3. Check if publisher already has an existing listing
-        const existing = await findListingByPublisherId(input.publisherId);
-        if (existing) {
-          throw new Error("你已经发布过帖子了，每个人只能发布一个");
-        }
-
-        // 4. Check 30-minute cooldown (even for new publishers)
+        // 3. Check 30-minute cooldown
         const cooldown = await checkPublisherCooldown(input.publisherId);
         if (cooldown.inCooldown) {
           const mins = Math.ceil(cooldown.remainingSeconds / 60);
@@ -159,10 +152,6 @@ export const appRouter = createRouter({
         }
         return deleteListing(input.id);
       }),
-
-    checkPublisher: publicQuery
-      .input(z.object({ publisherId: z.string() }))
-      .query(({ input }) => findListingByPublisherId(input.publisherId)),
 
     /** Check cooldown status for frontend display */
     cooldownStatus: publicQuery

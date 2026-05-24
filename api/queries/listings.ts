@@ -164,12 +164,6 @@ export async function createPublisher(fingerprint: string): Promise<Publisher> {
   return findPublisherByFingerprint(fingerprint) || { id: 0, fingerprint, lastPostedAt: null, createdAt: null };
 }
 
-export async function findListingByPublisherId(publisherId: string): Promise<Listing | null> {
-  const results = await executeSql("SELECT * FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
-  if (!results.length || !results[0].rows.length) return null;
-  return toListing(parseRow(results[0].columns, results[0].rows[0]));
-}
-
 /** Check if publisher is in cooldown (30 minutes) */
 export async function checkPublisherCooldown(fingerprint: string): Promise<{ inCooldown: boolean; remainingSeconds: number }> {
   const results = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [fingerprint]);
