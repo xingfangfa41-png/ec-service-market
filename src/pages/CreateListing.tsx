@@ -111,19 +111,29 @@ export default function CreateListing() {
     },
   });
 
-  const uploadToCloudinary = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "ec_market_upload");
-
-    const res = await fetch("https://api.cloudinary.com/v1_1/dubpl7gp6/image/upload", {
+  // Upload image via backend (hides Cloudinary credentials)
+  const uploadImage = async (file: File): Promise<string> => {
+    const base64 = await fileToBase64(file);
+    const res = await fetch("/api/trpc/upload.image", {
       method: "POST",
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64 }),
     });
-
-    if (!res.ok) throw new Error("图片上传失败");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: { message: "上传失败" } }));
+      throw new Error(err.error?.message || "图片上传失败");
+    }
     const data = await res.json();
-    return data.secure_url;
+    return data.result?.data?.url;
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,7 +148,7 @@ export default function CreateListing() {
     setIsUploading(true);
     setError("");
     try {
-      const url = await uploadToCloudinary(file);
+      const url = await uploadImage(file);
       setImage(url);
     } catch (err: any) {
       setError(err.message || "图片上传失败");
