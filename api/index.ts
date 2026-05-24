@@ -33,6 +33,15 @@ function extract(row, index) {
   return cell;
 }
 
+function formatDate(ts) {
+  if (!ts) return null;
+  const num = Number(ts);
+  if (!isNaN(num) && num > 1000000000) {
+    return new Date(num * 1000).toISOString();
+  }
+  return ts;
+}
+
 function toListing(row) {
   return {
     id: Number(extract(row, 0) || 0),
@@ -44,7 +53,7 @@ function toListing(row) {
     contactType: String(extract(row, 6) || ""),
     contactValue: String(extract(row, 7) || ""),
     publisherId: String(extract(row, 8) || ""),
-    createdAt: extract(row, 9),
+    createdAt: formatDate(extract(row, 9)),
     image: extract(row, 10),
   };
 }
