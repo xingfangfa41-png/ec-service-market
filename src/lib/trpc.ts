@@ -87,7 +87,7 @@ export const trpc = {
         return { data, isLoading, error: error ? { message: error.message } : null };
       },
     },
-        cooldownStatus: {
+    cooldownStatus: {
       useQuery: (input: { publisherId: string }, opts?: any) => {
         const [data, setData] = useState<any>(null);
 
