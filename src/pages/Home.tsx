@@ -69,7 +69,7 @@ export default function Home() {
     { enabled: true }
   );
 
-  const { data: myListing } = trpc.listing.checkPublisher.useQuery(
+  const { data:  } = trpc.listing.checkPublisher.useQuery(
     { publisherId: fingerprint },
     { enabled: !!fingerprint }
   );
@@ -94,7 +94,7 @@ export default function Home() {
             <SiteNavPanel />
             <Button
               onClick={() => {
-                if (myListing) {
+                if () {
                   alert("你已经发布过帖子了，每个人只能发布一个");
                   return;
                 }
@@ -238,7 +238,7 @@ export default function Home() {
             <p className="text-sm text-zinc-600 mb-6">成为第一个发布的人吧</p>
             <Button
               onClick={() => {
-                if (myListing) { alert("你已经发布过帖子了"); return; }
+                if () { alert("你已经发布过帖子了"); return; }
                 navigate("/create");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
