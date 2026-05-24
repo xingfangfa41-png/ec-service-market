@@ -119,12 +119,12 @@ export default async function handler(request: Request) {
       let results;
       if (category && category !== "all") {
         results = await executeSql(
-          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings WHERE id IN (SELECT MAX(id) FROM listings WHERE category = ? GROUP BY publisher_id) ORDER BY created_at DESC LIMIT 100",
+          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100",
           [category]
         );
       } else {
         results = await executeSql(
-          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings WHERE id IN (SELECT MAX(id) FROM listings GROUP BY publisher_id) ORDER BY created_at DESC LIMIT 100"
+          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings ORDER BY created_at DESC LIMIT 100"
         );
       }
       const { rows } = results[0] || { columns: [], rows: [] };
