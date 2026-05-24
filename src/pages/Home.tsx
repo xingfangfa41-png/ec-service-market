@@ -69,10 +69,6 @@ export default function Home() {
     { enabled: true }
   );
 
-    { publisherId: fingerprint },
-    { enabled: !!fingerprint }
-  );
-
   const error = rpcError ? "加载失败: " + rpcError.message : "";
 
   return (
@@ -93,10 +89,6 @@ export default function Home() {
             <SiteNavPanel />
             <Button
               onClick={() => {
-                if () {
-                  alert("你已经发布过帖子了，每个人只能发布一个");
-                  return;
-                }
                 navigate("/create");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-9 px-4 text-sm"
@@ -237,7 +229,6 @@ export default function Home() {
             <p className="text-sm text-zinc-600 mb-6">成为第一个发布的人吧</p>
             <Button
               onClick={() => {
-                if () { alert("你已经发布过帖子了"); return; }
                 navigate("/create");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
