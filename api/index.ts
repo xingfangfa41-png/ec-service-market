@@ -130,14 +130,6 @@ export default async function handler(request) {
       return json({ result: { data: rows.length ? toListing(rows[0]) : null } });
     }
 
-    if (path === "listing.checkPublisher") {
-      const publisherId = url.searchParams.get("publisherId");
-      if (!publisherId) return json({ error: "Missing publisherId" }, 400);
-      const results = await executeSql("SELECT * FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
-      const rows = results[0]?.rows || [];
-      return json({ result: { data: rows.length ? toListing(rows[0]) : null } });
-    }
-
     if (path === "listing.cooldownStatus") {
       const publisherId = url.searchParams.get("publisherId");
       if (!publisherId) return json({ error: "Missing publisherId" }, 400);
@@ -169,8 +161,6 @@ export default async function handler(request) {
       if (!category || !title?.trim() || title.trim().length < 3) return json({ error: { message: "标题至少3个字符" } }, 400);
       if (!description?.trim() || description.trim().length < 10) return json({ error: { message: "描述至少10个字符" } }, 400);
       if (!contactValue?.trim()) return json({ error: { message: "请填写联系方式" } }, 400);
-      const existing = await executeSql("SELECT id FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
-      if (existing[0]?.rows?.length) return json({ error: { message: "你已经发布过帖子了，每个人只能发布一个" } }, 400);
       const pubResults = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       const lastPosted = val(pubResults[0]?.rows?.[0]?.[0]);
       if (lastPosted) {

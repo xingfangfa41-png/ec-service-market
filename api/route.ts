@@ -49,16 +49,6 @@ export default async function handler(request: Request) {
       return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), publisherId: String(r[8] || ""), createdAt: r[9] || null, image: r[10] || null } } });
     }
 
-    // === listing.checkPublisher ===
-    if (path === "listing.checkPublisher") {
-      const publisherId = url.searchParams.get("publisherId");
-      if (!publisherId) return json({ error: "Missing publisherId" }, 400);
-      const results = await executeSql("SELECT * FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
-      if (!results[0]?.rows?.length) return json({ result: { data: null } });
-      const r = results[0].rows[0];
-      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), publisherId: String(r[8] || ""), createdAt: r[9] || null, image: r[10] || null } } });
-    }
-
     // === listing.cooldownStatus ===
     if (path === "listing.cooldownStatus") {
       const publisherId = url.searchParams.get("publisherId");
@@ -78,8 +68,6 @@ export default async function handler(request: Request) {
       if (!category || !title?.trim() || title.trim().length < 3) return json({ error: { message: "标题至少3个字符" } }, 400);
       if (!description?.trim() || description.trim().length < 10) return json({ error: { message: "描述至少10个字符" } }, 400);
       if (!contactValue?.trim()) return json({ error: { message: "请填写联系方式" } }, 400);
-      const existing = await executeSql("SELECT id FROM listings WHERE publisher_id = ? LIMIT 1", [publisherId]);
-      if (existing[0]?.rows?.length) return json({ error: { message: "你已经发布过帖子了，每个人只能发布一个" } }, 400);
       const pubResults = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       const lastPosted = pubResults[0]?.rows?.[0]?.[0];
       if (lastPosted) {
