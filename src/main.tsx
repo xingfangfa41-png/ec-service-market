@@ -1,8 +1,9 @@
+import "./lib/polyfill"; // iOS/Safari compatibility - must be first
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router";
 import "./index.css";
-// force-rebuild: v2
+// force-rebuild: v3
 import App from "./App.tsx";
 
 createRoot(document.getElementById("root")!).render(
