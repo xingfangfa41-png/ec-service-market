@@ -61,11 +61,7 @@ export default function CreateListing() {
     return fp;
   })();
 
-  // Check if user already has a listing
-  const { data: existingListing } = trpc.listing.checkPublisher.useQuery(
-    { publisherId: fingerprint },
-    { enabled: !!fingerprint }
-  );
+
 
   // Check cooldown status
   const { data: cooldownData, refetch: refetchCooldown } = trpc.listing.cooldownStatus.useQuery(
@@ -168,11 +164,6 @@ export default function CreateListing() {
     if (description.trim().length < 10) { setError("描述至少10个字符"); return; }
     if (!contactValue.trim()) { setError("请填写联系方式"); return; }
 
-    if (existingListing) {
-      setError("你已经发布过帖子了，每个人只能发布一个");
-      return;
-    }
-
     if (!canSubmit || cooldownSeconds > 0) {
       setError(`请等待 ${formatCooldown(cooldownSeconds)} 后再发布`);
       return;
@@ -194,7 +185,7 @@ export default function CreateListing() {
   const isSubmitting = createMutation.isPending;
 
   // Check if form should be disabled
-  const isDisabled = isSubmitting || isUploading || !canSubmit || !!existingListing;
+  const isDisabled = isSubmitting || isUploading || !canSubmit;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -208,13 +199,7 @@ export default function CreateListing() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-6">
-        {/* Status banner */}
-        {existingListing && (
-          <div className="mb-4 rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-400 flex items-center gap-2">
-            <Shield className="h-4 w-4 shrink-0" />
-            你已经发布过帖子了，每人只能发布一个。如需修改请删除原帖后重新发布。
-          </div>
-        )}
+
         {cooldownSeconds > 0 && !existingListing && (
           <div className="mb-4 rounded-lg bg-orange-500/10 border border-orange-500/20 px-4 py-3 text-sm text-orange-400 flex items-center gap-2">
             <Clock className="h-4 w-4 shrink-0" />
@@ -339,7 +324,7 @@ export default function CreateListing() {
             ) : (
               <>
                 <Send className="h-4 w-4" />
-                {existingListing ? "已发布（无法重复）" : "发布帖子"}
+                {"发布帖子"}
               </>
             )}
           </Button>
