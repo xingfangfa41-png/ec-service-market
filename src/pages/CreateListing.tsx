@@ -48,6 +48,7 @@ export default function CreateListing() {
   const [contactType, setContactType] = useState<"wechat" | "qq">("wechat");
   const [contactValue, setContactValue] = useState("");
   const [image, setImage] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [canSubmit, setCanSubmit] = useState(true);
@@ -138,12 +139,15 @@ export default function CreateListing() {
       return;
     }
 
+    setIsUploading(true);
+    setError("");
     try {
-      setError("");
       const url = await uploadToCloudinary(file);
       setImage(url);
     } catch (err: any) {
       setError(err.message || "图片上传失败");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -190,7 +194,7 @@ export default function CreateListing() {
   const isSubmitting = createMutation.isPending;
 
   // Check if form should be disabled
-  const isDisabled = isSubmitting || !canSubmit || !!existingListing;
+  const isDisabled = isSubmitting || isUploading || !canSubmit || !!existingListing;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -323,7 +327,9 @@ export default function CreateListing() {
             disabled={isDisabled}
             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-12 text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? (
+            {isUploading ? (
+              <>图片上传中...</>
+            ) : isSubmitting ? (
               <>发布中...</>
             ) : cooldownSeconds > 0 && !existingListing ? (
               <>
