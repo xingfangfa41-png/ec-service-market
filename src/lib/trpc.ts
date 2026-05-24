@@ -163,6 +163,23 @@ export const trpc = {
         return { mutate, isPending };
       },
     },
+    checkOwner: {
+      useMutation: (opts?: any) => {
+        const [isPending, setPending] = useState(false);
+        const mutate = async (body: any) => {
+          setPending(true);
+          try {
+            const res = await post("listing.checkOwner", body);
+            return res.result?.data;
+          } catch (err: any) {
+            return { isOwner: false };
+          } finally {
+            setPending(false);
+          }
+        };
+        return { mutate, isPending };
+      },
+    },
   },
   useUtils: () => ({
     invalidate: () => {},

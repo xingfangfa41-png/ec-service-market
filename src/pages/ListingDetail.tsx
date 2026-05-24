@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
@@ -73,12 +73,28 @@ export default function ListingDetail() {
   });
 
   const fingerprint = localStorage.getItem("publisher_fp") || "";
+  const [isOwner, setIsOwner] = useState(false);
 
   // tRPC queries & mutations
   const { data: listing, isLoading } = trpc.listing.getById.useQuery(
     { id: listingId },
     { enabled: listingId > 0 }
   );
+
+  // Check ownership securely via backend (publisherId no longer exposed in API)
+  const checkOwnerMutation = trpc.listing.checkOwner.useMutation();
+  useEffect(() => {
+    if (listing && listingId > 0 && fingerprint) {
+      checkOwnerMutation.mutate(
+        { id: listingId, publisherId: fingerprint },
+        {
+          onSuccess: (data) => {
+            setIsOwner(data?.isOwner || false);
+          },
+        }
+      );
+    }
+  }, [listing, listingId, fingerprint]);
 
   const utils = trpc.useUtils();
 
@@ -98,8 +114,6 @@ export default function ListingDetail() {
       setEditError(err.message);
     },
   });
-
-  const isOwner = listing ? listing.publisherId === fingerprint : false;
 
   // Initialize edit form when entering edit mode
   const startEditing = () => {

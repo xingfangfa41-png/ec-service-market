@@ -52,7 +52,6 @@ function toListing(row) {
     price: extract(row, 5),
     contactType: String(extract(row, 6) || ""),
     contactValue: String(extract(row, 7) || ""),
-    publisherId: String(extract(row, 8) || ""),
     createdAt: formatDate(extract(row, 9)),
     image: extract(row, 10),
   };
@@ -128,6 +127,17 @@ export default async function handler(request) {
       const results = await executeSql("SELECT * FROM listings WHERE id = ?", [id]);
       const rows = results[0]?.rows || [];
       return json({ result: { data: rows.length ? toListing(rows[0]) : null } });
+    }
+
+    // --- listing.checkOwner (POST) ---
+    if (path === "listing.checkOwner" && request.method === "POST") {
+      const body = await request.json();
+      const { id, publisherId } = body;
+      if (!id || !publisherId) return json({ result: { data: { isOwner: false } } });
+      const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
+      if (!results[0]?.rows?.length) return json({ result: { data: { isOwner: false } } });
+      const isOwner = val(results[0].rows[0][0]) === publisherId;
+      return json({ result: { data: { isOwner } } });
     }
 
     if (path === "listing.cooldownStatus") {

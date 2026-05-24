@@ -34,7 +34,7 @@ export default async function handler(request: Request) {
         id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""),
         description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null,
         contactType: String(r[6] || ""), contactValue: String(r[7] || ""),
-        publisherId: String(r[8] || ""), image: r[10] || null, createdAt: r[9] || null,
+        image: r[10] || null, createdAt: r[9] || null,
       }));
       return json({ result: { data: listings } });
     }
@@ -46,7 +46,18 @@ export default async function handler(request: Request) {
       const results = await executeSql("SELECT * FROM listings WHERE id = ?", [id]);
       if (!results[0]?.rows?.length) return json({ result: { data: null } });
       const r = results[0].rows[0];
-      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), publisherId: String(r[8] || ""), createdAt: r[9] || null, image: r[10] || null } } });
+      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), createdAt: r[9] || null, image: r[10] || null } } });
+    }
+
+    // === listing.checkOwner (POST) ===
+    if (path === "listing.checkOwner" && request.method === "POST") {
+      const body = await request.json();
+      const { id, publisherId } = body;
+      if (!id || !publisherId) return json({ result: { data: { isOwner: false } } });
+      const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
+      if (!results[0]?.rows?.length) return json({ result: { data: { isOwner: false } } });
+      const isOwner = results[0].rows[0][0] === publisherId;
+      return json({ result: { data: { isOwner } } });
     }
 
     // === listing.cooldownStatus ===
