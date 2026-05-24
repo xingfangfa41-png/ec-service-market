@@ -132,7 +132,7 @@ export default async function handler(request: Request) {
         id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""),
         description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null,
         contactType: String(r[6] || ""), contactValue: String(r[7] || ""),
-        image: r[10] || null, createdAt: r[9] || null,
+        image: r[9] || null, createdAt: r[8] || null,
       }));
       return json({ result: { data: listings } });
     }
@@ -147,7 +147,7 @@ export default async function handler(request: Request) {
       );
       if (!results[0]?.rows?.length) return json({ result: { data: null } });
       const r = results[0].rows[0];
-      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), createdAt: r[9] || null, image: r[10] || null } } });
+      return json({ result: { data: { id: Number(r[0]), category: String(r[1] || ""), title: String(r[2] || ""), description: String(r[3] || ""), serverName: r[4] || null, price: r[5] || null, contactType: String(r[6] || ""), contactValue: String(r[7] || ""), createdAt: r[8] || null, image: r[9] || null } } });
     }
 
     // === listing.checkOwner (POST) ===

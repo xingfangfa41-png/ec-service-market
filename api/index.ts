@@ -55,8 +55,8 @@ function toListing(row) {
     price: extract(row, 5),
     contactType: String(extract(row, 6) || ""),
     contactValue: String(extract(row, 7) || ""),
-    createdAt: formatDate(extract(row, 9)),
-    image: extract(row, 10),
+    createdAt: formatDate(extract(row, 8)),
+    image: extract(row, 9),
   };
 }
 
