@@ -194,7 +194,7 @@ export default function Home() {
                     <img
                       src={listing.image}
                       alt={listing.title}
-                      className="w-full max-h-56 object-contain"
+                      className="w-full object-contain max-h-[480px]"
                       loading="lazy"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
