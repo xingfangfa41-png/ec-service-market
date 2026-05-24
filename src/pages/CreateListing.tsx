@@ -200,7 +200,7 @@ export default function CreateListing() {
 
       <main className="mx-auto max-w-2xl px-4 py-6">
 
-        {cooldownSeconds > 0 && !existingListing && (
+        {cooldownSeconds > 0 && (
           <div className="mb-4 rounded-lg bg-orange-500/10 border border-orange-500/20 px-4 py-3 text-sm text-orange-400 flex items-center gap-2">
             <Clock className="h-4 w-4 shrink-0" />
             发布冷却中，剩余时间：<span className="font-mono font-bold">{formatCooldown(cooldownSeconds)}</span>
@@ -316,7 +316,7 @@ export default function CreateListing() {
               <>图片上传中...</>
             ) : isSubmitting ? (
               <>发布中...</>
-            ) : cooldownSeconds > 0 && !existingListing ? (
+            ) : cooldownSeconds > 0 ? (
               <>
                 <Clock className="h-4 w-4" />
                 等待 {formatCooldown(cooldownSeconds)}
