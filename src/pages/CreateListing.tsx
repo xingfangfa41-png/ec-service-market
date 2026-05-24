@@ -114,20 +114,37 @@ export default function CreateListing() {
     },
   });
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "ec_market_upload");
+
+    const res = await fetch("https://api.cloudinary.com/v1_1/dubpl7gp6/image/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) throw new Error("图片上传失败");
+    const data = await res.json();
+    return data.secure_url;
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("图片不能超过 5MB");
+    if (file.size > 24 * 1024 * 1024) {
+      setError("图片不能超过 24MB");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setError("");
+      const url = await uploadToCloudinary(file);
+      setImage(url);
+    } catch (err: any) {
+      setError(err.message || "图片上传失败");
+    }
   };
 
   const removeImage = () => {
@@ -270,7 +287,7 @@ export default function CreateListing() {
                 className="w-full rounded-xl border border-dashed border-white/10 bg-[#111118] p-6 text-center transition-colors hover:bg-[#16161f] hover:border-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
                 <ImagePlus className="h-8 w-8 mx-auto mb-2 text-zinc-600" />
                 <p className="text-sm text-zinc-500">点击上传截图</p>
-                <p className="text-xs text-zinc-600 mt-1">支持 jpg/png，最大 5MB</p>
+                <p className="text-xs text-zinc-600 mt-1">支持 jpg/png，最大 24MB（上传到 Cloudinary 图床）</p>
               </button>
             )}
           </div>
