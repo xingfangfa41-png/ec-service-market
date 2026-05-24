@@ -4,6 +4,14 @@
     {
       "source": "/api/trpc/(.*)",
       "destination": "/api?path=$1"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
