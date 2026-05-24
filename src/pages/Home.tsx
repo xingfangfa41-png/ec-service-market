@@ -81,7 +81,7 @@ export default function Home() {
             <SiteNavPanel />
             <Button
               onClick={() => {
-                navigate("/create");
+                navigate("/verify");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-9 px-4 text-sm"
             >
@@ -220,7 +220,7 @@ export default function Home() {
             <p className="text-sm text-zinc-600 mb-6">成为第一个发布的人吧</p>
             <Button
               onClick={() => {
-                navigate("/create");
+                navigate("/verify");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
             >

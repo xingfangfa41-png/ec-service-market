@@ -155,7 +155,10 @@ export const trpc = {
         const mutate = async (body: any) => {
           setPending(true);
           try {
-            const res = await post("listing.create", body);
+            // Include human verification token
+            const verifyRaw = sessionStorage.getItem("ec_verify");
+            const humanToken = verifyRaw ? JSON.parse(verifyRaw)?.hash || "" : "";
+            const res = await post("listing.create", { ...body, humanToken });
             opts?.onSuccess?.();
             return res;
           } catch (err: any) {

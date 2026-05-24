@@ -40,6 +40,24 @@ function formatCooldown(seconds: number): string {
 
 export default function CreateListing() {
   const navigate = useNavigate();
+
+  // Check if user passed verification (AI/scripted attacks can't pass this)
+  useEffect(() => {
+    const verifyRaw = sessionStorage.getItem("ec_verify");
+    if (!verifyRaw) {
+      navigate("/verify");
+      return;
+    }
+    try {
+      const verify = JSON.parse(verifyRaw);
+      if (!verify.verified || Date.now() > verify.expiresAt) {
+        navigate("/verify");
+      }
+    } catch {
+      navigate("/verify");
+    }
+  }, [navigate]);
+
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

@@ -2,11 +2,13 @@ import { Routes, Route } from 'react-router'
 import Home from './pages/Home'
 import CreateListing from './pages/CreateListing'
 import ListingDetail from './pages/ListingDetail'
+import VerifyPage from './pages/VerifyPage'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/verify" element={<VerifyPage />} />
       <Route path="/create" element={<CreateListing />} />
       <Route path="/listing/:id" element={<ListingDetail />} />
     </Routes>

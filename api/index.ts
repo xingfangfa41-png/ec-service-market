@@ -210,6 +210,25 @@ export default async function handler(request) {
   const clientIP = getClientIP(request);
 
   try {
+    // === verify.human (POST) - Issue a human-verified token after interactive challenge ===
+    if (path === "verify.human" && request.method === "POST") {
+      const body = await request.json();
+      const { challenge } = body;
+      if (!challenge || typeof challenge !== "string" || challenge.length < 10) {
+        return json({ error: { message: "无效验证" } }, 400);
+      }
+      
+      // Sign the challenge with server secret + timestamp
+      const now = Date.now();
+      const tokenData = `${challenge}:${now}`;
+      const key = await getCryptoKey();
+      const sig = await crypto.subtle.sign("HMAC", key, strToBuf(tokenData));
+      const token = bufToHex(sig);
+      
+      // Token valid for 10 minutes
+      return json({ result: { data: { token, expiresAt: now + 10 * 60 * 1000 } } });
+    }
+
     // === listing.getToken (GET) - Generate a new signed publisherId ===
     if (path === "listing.getToken") {
       const { id, signature } = await generatePublisherId();
@@ -296,22 +315,30 @@ export default async function handler(request) {
     // === listing.create (POST) ===
     if (path === "listing.create" && request.method === "POST") {
       const body = await request.json();
-      const { category, title, description, serverName, price, contactType, contactValue, publisherId, signature } = body;
+      const { category, title, description, serverName, price, contactType, contactValue, publisherId, signature, humanToken } = body;
 
-      // 1. Validate signature (prevents forged publisherId)
+      // 1. Validate human verification token (prevents AI/script bypass)
+      if (!humanToken || typeof humanToken !== "string" || humanToken.length < 20) {
+        return json({ error: { message: "请先完成人机验证" } }, 403);
+      }
+      // Verify human token signature
+      const tokenValid = await verifyPublisherId(humanToken.split(":")[0] || "", humanToken);
+      if (!tokenValid) return json({ error: { message: "人机验证已过期，请重新验证" } }, 403);
+
+      // 2. Validate publisherId signature (prevents forged publisherId)
       const sigValid = await verifyPublisherId(publisherId, signature);
       if (!sigValid) return json({ error: { message: "非法请求，请刷新页面后重试" } }, 403);
 
-      // 2. IP-level rate limiting
+      // 3. IP-level rate limiting
       const ipLimit = checkIPLimit(clientIP);
       if (!ipLimit.allowed) return json({ error: { message: ipLimit.reason } }, 429);
 
-      // 3. Content validation
+      // 4. Content validation
       if (!category || !title?.trim() || title.trim().length < 3) return json({ error: { message: "标题至少3个字符" } }, 400);
       if (!description?.trim() || description.trim().length < 10) return json({ error: { message: "描述至少10个字符" } }, 400);
       if (!contactValue?.trim()) return json({ error: { message: "请填写联系方式" } }, 400);
 
-      // 4. Per-publisher cooldown
+      // 5. Per-publisher cooldown
       const pubResults = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       const lastPosted = val(pubResults[0]?.rows?.[0]?.[0]);
       if (lastPosted) {
@@ -319,11 +346,11 @@ export default async function handler(request) {
         if (elapsed < COOLDOWN_MS) { const mins = Math.ceil((COOLDOWN_MS - elapsed) / 60000); return json({ error: { message: `发布太频繁，请等待 ${mins} 分钟后再试` } }, 400); }
       }
 
-      // 5. Ensure publisher exists
+      // 6. Ensure publisher exists
       const pubCheck = await executeSql("SELECT id FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       if (!pubCheck[0]?.rows?.length) await executeSql("INSERT INTO publishers (fingerprint) VALUES (?)", [publisherId]);
 
-      // 6. Insert listing
+      // 7. Insert listing
       const imageValue = body.image || null;
       await executeSql(
         `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
