@@ -87,24 +87,7 @@ export const trpc = {
         return { data, isLoading, error: error ? { message: error.message } : null };
       },
     },
-    checkPublisher: {
-      useQuery: (input: { publisherId: string }, opts?: any) => {
-        const [data, setData] = useState<any | null>(null);
-
-        const fetchData = async () => {
-          if (!input.publisherId) return;
-          try {
-            const res = await get("listing.checkPublisher", { publisherId: input.publisherId });
-            setData(res.result?.data || null);
-          } catch { setData(null); }
-        };
-
-        useEffect(() => { fetchData(); }, [input.publisherId]);
-
-        return { data };
-      },
-    },
-    cooldownStatus: {
+        cooldownStatus: {
       useQuery: (input: { publisherId: string }, opts?: any) => {
         const [data, setData] = useState<any>(null);
 
