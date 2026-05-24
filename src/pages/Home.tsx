@@ -69,7 +69,6 @@ export default function Home() {
     { enabled: true }
   );
 
-  const { data:  } = trpc.listing.checkPublisher.useQuery(
     { publisherId: fingerprint },
     { enabled: !!fingerprint }
   );
