@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
@@ -30,7 +30,10 @@ import {
   Trash2,
   X,
   Save,
+  Send,
+  MessageSquare,
 } from "lucide-react";
+import { getRandomCommentIdentity } from "@/lib/identity";
 
 const categoryIconMap: Record<string, React.ElementType> = {
   "陪聊": MessageCircle,
@@ -73,6 +76,19 @@ export default function ListingDetail() {
   });
 
   const [isOwner, setIsOwner] = useState(false);
+
+  // Comments
+  const [commentText, setCommentText] = useState("");
+  const { data: comments, isLoading: commentsLoading, refetch: refetchComments } = trpc.comment.list.useQuery({ listingId });
+  const commentMutation = trpc.comment.create.useMutation({
+    onSuccess: () => {
+      setCommentText("");
+      refetchComments();
+    },
+  });
+
+  // Generate random identity for commenting
+  const commentIdentity = useMemo(() => getRandomCommentIdentity(), []);
 
   // tRPC queries & mutations
   const { data: listing, isLoading } = trpc.listing.getById.useQuery(
@@ -388,6 +404,106 @@ export default function ListingDetail() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* ===== Comments Section ===== */}
+              <div className="mt-8 rounded-xl bg-[#111118] border border-white/5 overflow-hidden">
+                <div className="p-5 border-b border-white/5">
+                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-emerald-400" />
+                    评论
+                    {comments && comments.length > 0 && (
+                      <span className="text-sm text-zinc-500">({comments.length})</span>
+                    )}
+                  </h3>
+                </div>
+
+                {/* Comment list */}
+                <div className="p-5 space-y-4">
+                  {commentsLoading ? (
+                    <p className="text-sm text-zinc-600 text-center py-4">加载评论中...</p>
+                  ) : comments && comments.length > 0 ? (
+                    comments.map((comment: any) => (
+                      <div key={comment.id} className="flex gap-3">
+                        {/* Avatar */}
+                        <div
+                          className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                          style={{
+                            background: comment.color
+                              ? `linear-gradient(135deg, ${comment.color}44, ${comment.color}66)`
+                              : "linear-gradient(135deg, #10b98144, #10b98166)",
+                          }}
+                        >
+                          {(comment.nickname || "匿")[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-zinc-300">
+                              {comment.nickname || "匿名用户"}
+                            </span>
+                            <span className="text-xs text-zinc-600">
+                              {formatRelativeTime(comment.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-zinc-400 leading-relaxed break-words">
+                            {comment.content}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-zinc-600 text-center py-4">暂无评论，来说点什么吧</p>
+                  )}
+                </div>
+
+                {/* Comment input */}
+                <div className="p-5 border-t border-white/5">
+                  <div className="flex gap-3">
+                    {/* User avatar preview */}
+                    <div
+                      className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                      style={{ background: commentIdentity.gradient }}
+                    >
+                      {commentIdentity.name[0]}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-zinc-500 mb-2">
+                        你的昵称：<span className="text-zinc-300">{commentIdentity.name}</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          placeholder="写下你的评论..."
+                          className="flex-1 min-h-[60px] bg-[#0d0d14] border-white/5 text-zinc-200 placeholder:text-zinc-700 focus:border-emerald-500/30 focus:ring-emerald-500/10 text-sm"
+                          maxLength={500}
+                        />
+                        <Button
+                          onClick={() => {
+                            if (!commentText.trim()) return;
+                            commentMutation.mutate({
+                              listingId,
+                              content: commentText.trim(),
+                              nickname: commentIdentity.name,
+                              color: commentIdentity.color,
+                            });
+                          }}
+                          disabled={commentMutation.isPending || !commentText.trim()}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white self-end h-10 px-4"
+                        >
+                          {commentMutation.isPending ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {commentMutation.isError && (
+                        <p className="text-xs text-red-400 mt-2">{commentMutation.error?.message || "评论失败"}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}

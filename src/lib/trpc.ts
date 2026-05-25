@@ -248,4 +248,52 @@ export const trpc = {
   useUtils: () => ({
     invalidate: () => {},
   }),
+  comment: {
+    list: {
+      useQuery: (input: { listingId: number }, opts?: any) => {
+        const [data, setData] = useState<any[] | null>(null);
+        const [isLoading, setLoading] = useState(true);
+
+        const fetchData = async () => {
+          if (!input.listingId) return;
+          setLoading(true);
+          try {
+            const res = await get("comment.list", { listingId: String(input.listingId) });
+            setData(res.result?.data || []);
+          } catch { setData([]); }
+          finally { setLoading(false); }
+        };
+
+        useEffect(() => { fetchData(); }, [input.listingId]);
+
+        return { data: data || [], isLoading };
+      },
+    },
+    create: {
+      useMutation: (opts?: any) => {
+        const [isPending, setPending] = useState(false);
+        const mutate = async (body: any) => {
+          setPending(true);
+          try {
+            // Include human verification token
+            const verifyRaw = sessionStorage.getItem("ec_verify");
+            const verifyData = verifyRaw ? JSON.parse(verifyRaw) : null;
+            const humanToken = verifyData?.token || "";
+            if (!humanToken || Date.now() > (verifyData?.expiresAt || 0)) {
+              throw new Error("人机验证已过期，请重新验证");
+            }
+            const res = await post("comment.create", { ...body, humanToken });
+            opts?.onSuccess?.();
+            return res;
+          } catch (err: any) {
+            opts?.onError?.(err);
+            throw err;
+          } finally {
+            setPending(false);
+          }
+        };
+        return { mutate, isPending };
+      },
+    },
+  },
 };

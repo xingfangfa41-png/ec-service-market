@@ -193,6 +193,29 @@ export default async function handler(request: Request) {
       return json({ result: { data: { inCooldown: false, remainingSeconds: 0 } } });
     }
 
+    // === comment.create (POST) ===
+    if (path === "comment.create" && request.method === "POST") {
+      const body = await request.json();
+      const { listingId, content, nickname, color, humanToken } = body;
+      const tokenErr = validateHumanToken(humanToken);
+      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
+      if (!listingId || !content?.trim()) return json({ error: { message: "评论内容不能为空" } }, 400);
+      if (content.length > 500) return json({ error: { message: "评论最多500字" } }, 400);
+      await executeSql(`CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL, content TEXT NOT NULL, nickname TEXT, color TEXT, created_at INTEGER DEFAULT (strftime('%s', 'now')))`);
+      await executeSql(`INSERT INTO comments (listing_id, content, nickname, color) VALUES (?, ?, ?, ?)`, [listingId, content.trim(), nickname || null, color || null]);
+      return json({ result: { data: { success: true } } });
+    }
+
+    // === comment.list ===
+    if (path === "comment.list") {
+      const listingId = Number(url.searchParams.get("listingId"));
+      if (!listingId) return json({ error: "Missing listingId" }, 400);
+      const results = await executeSql(`SELECT id, listing_id, content, nickname, color, created_at FROM comments WHERE listing_id = ? ORDER BY created_at DESC LIMIT 50`, [listingId]);
+      const rows = results[0]?.rows || [];
+      const comments = rows.map((r) => ({ id: Number(r[0]), listingId: Number(r[1]), content: String(r[2] || ""), nickname: r[3] || null, color: r[4] || null, createdAt: r[5] || null }));
+      return json({ result: { data: comments } });
+    }
+
     // === listing.create (POST) ===
     if (path === "listing.create" && request.method === "POST") {
       const body = await request.json();
