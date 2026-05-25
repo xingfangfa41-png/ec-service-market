@@ -129,25 +129,6 @@ function getClientIP(request) {
 }
 
 // Validate human verification token (returns null if valid, error message if invalid)
-function validateHumanToken(humanToken) {
-  if (!humanToken || typeof humanToken !== "string") {
-    return "请先完成人机验证";
-  }
-  // Registered user token: "registered:user" (24h expiry handled by frontend)
-  if (humanToken === "registered:user") {
-    return null;
-  }
-  // Full token: "challenge:timestamp:signature"
-  if (humanToken.length < 20) return "验证令牌格式错误";
-  const parts = humanToken.split(":");
-  if (parts.length !== 3) return "验证令牌格式错误";
-  const timestamp = parseInt(parts[1]);
-  const age = Date.now() - timestamp;
-  if (isNaN(timestamp) || age < 0 || age > 10 * 60 * 1000) {
-    return "人机验证已过期，请重新验证";
-  }
-  return null; // valid
-}
 
 function checkIPLimit(ip) {
   const now = Date.now();
@@ -397,9 +378,6 @@ export default async function handler(request) {
       const body = await request.json();
       const { listingId, content, nickname, color } = body;
 
-      // 1. Validate human verification token
-      const tokenErr = validateHumanToken(body.humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
 
       // 2. Content validation
       if (!listingId || !content?.trim()) return json({ error: { message: "评论内容不能为空" } }, 400);
@@ -449,11 +427,8 @@ export default async function handler(request) {
     // === listing.create (POST) ===
     if (path === "listing.create" && request.method === "POST") {
       const body = await request.json();
-      const { category, title, description, serverName, price, contactType, contactValue, publisherId, signature, humanToken } = body;
+      const { category, title, description, serverName, price, contactType, contactValue, publisherId, signature } = body;
 
-      // 1. Validate human verification token (prevents AI/script bypass)
-      const tokenErr = validateHumanToken(humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
 
       // 2. Validate publisherId signature (prevents forged publisherId)
       const sigValid = await verifyPublisherId(publisherId, signature);
@@ -497,11 +472,9 @@ export default async function handler(request) {
     // === listing.delete (POST) ===
     if (path === "listing.delete" && request.method === "POST") {
       const body = await request.json();
-      const { id, publisherId, signature, humanToken } = body;
+      const { id, publisherId, signature } = body;
 
       // Verify human token
-      const tokenErr = validateHumanToken(humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
 
       // Verify signature
       const sigValid = await verifyPublisherId(publisherId, signature);
@@ -517,11 +490,9 @@ export default async function handler(request) {
     // === listing.update (POST) ===
     if (path === "listing.update" && request.method === "POST") {
       const body = await request.json();
-      const { id, publisherId, signature, humanToken, category, title, description, serverName, price, contactType, contactValue } = body;
+      const { id, publisherId, signature, category, title, description, serverName, price, contactType, contactValue } = body;
 
       // Verify human token
-      const tokenErr = validateHumanToken(humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
 
       // Verify signature
       const sigValid = await verifyPublisherId(publisherId, signature);

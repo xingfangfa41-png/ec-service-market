@@ -61,21 +61,6 @@ async function generatePublisherId() {
 }
 
 // Validate human verification token
-function validateHumanToken(humanToken: string): string | null {
-  if (!humanToken || typeof humanToken !== "string") {
-    return "请先完成人机验证";
-  }
-  if (humanToken === "registered:user") return null;
-  if (humanToken.length < 20) return "验证令牌格式错误";
-  const parts = humanToken.split(":");
-  if (parts.length !== 3) return "验证令牌格式错误";
-  const timestamp = parseInt(parts[1]);
-  const age = Date.now() - timestamp;
-  if (isNaN(timestamp) || age < 0 || age > 10 * 60 * 1000) {
-    return "人机验证已过期，请重新验证";
-  }
-  return null;
-}
 
 // IP-based rate limiting
 const ipPostCounts = new Map<string, { count: number; resetTime: number }>();
@@ -233,9 +218,7 @@ export default async function handler(request: Request) {
     // === comment.create (POST) ===
     if (path === "comment.create" && request.method === "POST") {
       const body = await request.json();
-      const { listingId, content, nickname, color, humanToken } = body;
-      const tokenErr = validateHumanToken(humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
+      const { listingId, content, nickname, color } = body;
       if (!listingId || !content?.trim()) return json({ error: { message: "评论内容不能为空" } }, 400);
       if (content.length > 500) return json({ error: { message: "评论最多500字" } }, 400);
       await executeSql(`CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL, content TEXT NOT NULL, nickname TEXT, color TEXT, created_at INTEGER DEFAULT (strftime('%s', 'now')))`);
@@ -290,9 +273,7 @@ export default async function handler(request: Request) {
     // === listing.delete (POST) ===
     if (path === "listing.delete" && request.method === "POST") {
       const body = await request.json();
-      const { id, publisherId, signature, humanToken } = body;
-      const tokenErr = validateHumanToken(humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
+      const { id, publisherId, signature } = body;
       const sigValid = await verifyPublisherId(publisherId, signature);
       if (!sigValid) return json({ error: { message: "非法请求" } }, 403);
       const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
@@ -305,9 +286,7 @@ export default async function handler(request: Request) {
     // === listing.update (POST) ===
     if (path === "listing.update" && request.method === "POST") {
       const body = await request.json();
-      const { id, publisherId, signature, humanToken, category, title, description, serverName, price, contactType, contactValue } = body;
-      const tokenErr = validateHumanToken(humanToken);
-      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
+      const { id, publisherId, signature, category, title, description, serverName, price, contactType, contactValue } = body;
       const sigValid = await verifyPublisherId(publisherId, signature);
       if (!sigValid) return json({ error: { message: "非法请求" } }, 403);
       const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
