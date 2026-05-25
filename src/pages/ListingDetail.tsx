@@ -472,14 +472,7 @@ export default function ListingDetail() {
                 <div className="p-5 border-t border-white/5">
                   <div className="flex gap-3">
                     {/* User avatar preview */}
-                    <div
-                      className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{
-                        background: currentUser?.avatar
-                          ? undefined
-                          : "linear-gradient(135deg, #10b98144, #10b98166)",
-                      }}
-                    >
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden">
                       {currentUser?.avatar ? (
                         <img
                           src={`/avatars/${currentUser.avatar}.png`}

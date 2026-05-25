@@ -33,7 +33,8 @@ export default function RegisterPage() {
       try {
         const res = await fetch(`/api/trpc/user.checkUsername?username=${encodeURIComponent(username.trim())}`);
         const data = await res.json();
-        setAvailable(data.result?.data?.available || false);
+        const avail = data.result?.data?.available;
+        setAvailable(avail === true ? true : avail === false ? false : null);
       } catch {
         setAvailable(null);
       } finally {
@@ -114,12 +115,14 @@ export default function RegisterPage() {
 
           {/* Preview */}
           <div className="flex justify-center">
-            <div className="relative">
-              <img
-                src={AVATARS.find(a => a.id === selectedAvatar)?.path}
-                alt="avatar"
-                className="h-20 w-20 rounded-full object-cover ring-2 ring-emerald-500/30 ring-offset-2 ring-offset-[#111118]"
-              />
+            <div className="relative h-20 w-20">
+              <div className="h-20 w-20 rounded-full overflow-hidden ring-2 ring-emerald-500/30 ring-offset-2 ring-offset-[#111118]">
+                <img
+                  src={AVATARS.find(a => a.id === selectedAvatar)?.path}
+                  alt="avatar"
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center">
                 <Check className="h-3.5 w-3.5 text-white" />
               </div>
@@ -132,7 +135,7 @@ export default function RegisterPage() {
               <button
                 key={avatar.id}
                 onClick={() => setSelectedAvatar(avatar.id)}
-                className={`relative aspect-square rounded-lg overflow-hidden transition-all ${
+                className={`relative aspect-square rounded-full overflow-hidden transition-all ${
                   selectedAvatar === avatar.id
                     ? "ring-2 ring-emerald-400 ring-offset-1 ring-offset-[#111118] scale-110"
                     : "opacity-60 hover:opacity-100"
