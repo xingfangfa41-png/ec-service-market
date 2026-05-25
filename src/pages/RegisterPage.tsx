@@ -199,7 +199,7 @@ export default function RegisterPage() {
         {/* Submit */}
         <Button
           onClick={handleRegister}
-          disabled={success || !available}
+          disabled={success || available === false}
           className="w-full bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50"
         >
           {success ? "注册成功" : "确认创建"}
