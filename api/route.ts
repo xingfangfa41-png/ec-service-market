@@ -62,9 +62,11 @@ async function generatePublisherId() {
 
 // Validate human verification token
 function validateHumanToken(humanToken: string): string | null {
-  if (!humanToken || typeof humanToken !== "string" || humanToken.length < 20) {
+  if (!humanToken || typeof humanToken !== "string") {
     return "请先完成人机验证";
   }
+  if (humanToken === "registered:user") return null;
+  if (humanToken.length < 20) return "验证令牌格式错误";
   const parts = humanToken.split(":");
   if (parts.length !== 3) return "验证令牌格式错误";
   const timestamp = parseInt(parts[1]);

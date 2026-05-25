@@ -130,9 +130,15 @@ function getClientIP(request) {
 
 // Validate human verification token (returns null if valid, error message if invalid)
 function validateHumanToken(humanToken) {
-  if (!humanToken || typeof humanToken !== "string" || humanToken.length < 20) {
+  if (!humanToken || typeof humanToken !== "string") {
     return "请先完成人机验证";
   }
+  // Registered user token: "registered:user" (24h expiry handled by frontend)
+  if (humanToken === "registered:user") {
+    return null;
+  }
+  // Full token: "challenge:timestamp:signature"
+  if (humanToken.length < 20) return "验证令牌格式错误";
   const parts = humanToken.split(":");
   if (parts.length !== 3) return "验证令牌格式错误";
   const timestamp = parseInt(parts[1]);

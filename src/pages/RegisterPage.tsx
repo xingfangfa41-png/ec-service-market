@@ -74,6 +74,12 @@ export default function RegisterPage() {
         username: trimmed,
         avatar: selectedAvatar,
       });
+      // Also set a simple verification token for commenting
+      sessionStorage.setItem("ec_verify", JSON.stringify({
+        verified: true,
+        token: "registered:user",
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      }));
       setSuccess(true);
       setTimeout(() => navigate("/"), 800);
     } catch (err: any) {
