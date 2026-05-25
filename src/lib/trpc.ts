@@ -157,7 +157,12 @@ export const trpc = {
           try {
             // Include human verification token
             const verifyRaw = sessionStorage.getItem("ec_verify");
-            const humanToken = verifyRaw ? JSON.parse(verifyRaw)?.hash || "" : "";
+            const verifyData = verifyRaw ? JSON.parse(verifyRaw) : null;
+            const humanToken = verifyData?.token || "";
+            // Check if token expired
+            if (!humanToken || Date.now() > (verifyData?.expiresAt || 0)) {
+              throw new Error("人机验证已过期，请重新验证");
+            }
             const res = await post("listing.create", { ...body, humanToken });
             opts?.onSuccess?.();
             return res;

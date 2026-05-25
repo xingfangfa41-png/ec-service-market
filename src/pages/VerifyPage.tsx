@@ -108,26 +108,43 @@ export default function VerifyPage() {
     
     setPhase("clicked");
     
-    // Store verification in sessionStorage (not localStorage - AI resets localStorage harder)
-    // Add a small delay to ensure it was a real click, not a scripted one
+    // Small delay to ensure it was a real click, not a scripted one
     await new Promise(r => setTimeout(r, 100));
     
-    const verifyData = {
-      verified: true,
-      challenge: challenge,
-      verifiedAt: Date.now(),
-      // Token expires in 10 minutes
-      expiresAt: Date.now() + 10 * 60 * 1000,
-    };
-    
-    sessionStorage.setItem("ec_verify", JSON.stringify(verifyData));
-    
-    setPhase("success");
-    
-    // Navigate to create page after brief delay
-    setTimeout(() => {
-      navigate("/create");
-    }, 500);
+    try {
+      // Call backend to get a signed human verification token
+      const res = await fetch("/api/trpc/verify.human", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challenge: challenge || "default" }),
+      });
+      
+      if (!res.ok) throw new Error("验证失败");
+      const data = await res.json();
+      const token = data.result?.data?.token;
+      const expiresAt = data.result?.data?.expiresAt;
+      
+      if (!token) throw new Error("未获取到验证令牌");
+      
+      // Store signed token in sessionStorage
+      const verifyData = {
+        verified: true,
+        token: token,
+        verifiedAt: Date.now(),
+        expiresAt: expiresAt || Date.now() + 10 * 60 * 1000,
+      };
+      
+      sessionStorage.setItem("ec_verify", JSON.stringify(verifyData));
+      
+      setPhase("success");
+      
+      // Navigate to create page after brief delay
+      setTimeout(() => {
+        navigate("/create");
+      }, 500);
+    } catch (err) {
+      setPhase("expired");
+    }
   }, [phase, challenge, navigate]);
 
   const handleRetry = useCallback(() => {
