@@ -293,6 +293,8 @@ export default async function handler(request) {
     if (path === "user.checkUsername") {
       const username = url.searchParams.get("username")?.trim();
       if (!username) return json({ result: { data: { available: false } } });
+      // Ensure users table exists
+      await executeSql("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, avatar TEXT, fingerprint TEXT UNIQUE, created_at INTEGER DEFAULT (strftime('%s', 'now')))");
       const check = await executeSql("SELECT id FROM users WHERE username = ? LIMIT 1", [username]);
       return json({ result: { data: { available: !check[0]?.rows?.length } } });
     }
