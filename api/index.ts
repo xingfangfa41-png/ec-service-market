@@ -219,14 +219,15 @@ export default async function handler(request) {
       }
       
       // Sign the challenge with server secret + timestamp
+      // Token format: "challenge:timestamp:signature"
+      // timestamp prevents replay attacks (token expires after 10 min)
       const now = Date.now();
       const tokenData = `${challenge}:${now}`;
       const key = await getCryptoKey();
       const sig = await crypto.subtle.sign("HMAC", key, strToBuf(tokenData));
       const signature = bufToHex(sig);
       
-      // Return as "challenge:signature" so create endpoint can verify it
-      const token = `${challenge}:${signature}`;
+      const token = `${challenge}:${now}:${signature}`;
       
       // Token valid for 10 minutes
       return json({ result: { data: { token, expiresAt: now + 10 * 60 * 1000 } } });
@@ -324,21 +325,21 @@ export default async function handler(request) {
       if (!humanToken || typeof humanToken !== "string" || humanToken.length < 20) {
         return json({ error: { message: "请先完成人机验证" } }, 403);
       }
-      // Parse "challenge:signature" format
+      // Parse "challenge:timestamp:signature" format
       const tokenParts = humanToken.split(":");
-      if (tokenParts.length !== 2) return json({ error: { message: "验证令牌格式错误" } }, 403);
+      if (tokenParts.length !== 3) return json({ error: { message: "验证令牌格式错误" } }, 403);
       const tokenChallenge = tokenParts[0];
-      const tokenSig = tokenParts[1];
-      // Verify: signature must match HMAC(challenge:timestamp) - check both forms
-      const now = Date.now();
-      let tokenValid = false;
-      // Check within 10 minute window (token expires after 10 min)
-      for (let t = now; t > now - 10 * 60 * 1000; t -= 60000) {
-        const checkData = `${tokenChallenge}:${t}`;
-        const checkSig = await signPublisherId(checkData);
-        if (checkSig === tokenSig) { tokenValid = true; break; }
+      const tokenTimestamp = parseInt(tokenParts[1]);
+      const tokenSig = tokenParts[2];
+      // Check token not expired (10 minute window)
+      const tokenAge = Date.now() - tokenTimestamp;
+      if (isNaN(tokenTimestamp) || tokenAge < 0 || tokenAge > 10 * 60 * 1000) {
+        return json({ error: { message: "人机验证已过期，请重新验证" } }, 403);
       }
-      if (!tokenValid) return json({ error: { message: "人机验证已过期，请重新验证" } }, 403);
+      // Verify signature matches HMAC(challenge:timestamp)
+      const checkData = `${tokenChallenge}:${tokenTimestamp}`;
+      const checkSig = await signPublisherId(checkData);
+      if (checkSig !== tokenSig) return json({ error: { message: "验证签名不匹配" } }, 403);
 
       // 2. Validate publisherId signature (prevents forged publisherId)
       const sigValid = await verifyPublisherId(publisherId, signature);
