@@ -87,8 +87,13 @@ export default function ListingDetail() {
     },
   });
 
-  // Generate random identity for commenting
-  const commentIdentity = useMemo(() => getRandomCommentIdentity(), []);
+  // Generate deterministic identity for commenting (same user = same name)
+  const commentIdentity = useMemo(() => {
+    // Use publisher fingerprint from token as seed for consistent identity
+    const tokenRaw = localStorage.getItem("ec_token");
+    const seed = tokenRaw ? JSON.parse(tokenRaw)?.publisherId : null;
+    return getRandomCommentIdentity(seed || undefined);
+  }, []);
 
   // tRPC queries & mutations
   const { data: listing, isLoading } = trpc.listing.getById.useQuery(
