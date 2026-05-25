@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
@@ -33,7 +33,7 @@ import {
   Send,
   MessageSquare,
 } from "lucide-react";
-import { getRandomCommentIdentity } from "@/lib/identity";
+
 
 const categoryIconMap: Record<string, React.ElementType> = {
   "陪聊": MessageCircle,
@@ -87,12 +87,13 @@ export default function ListingDetail() {
     },
   });
 
-  // Generate deterministic identity for commenting (same user = same name)
-  const commentIdentity = useMemo(() => {
-    // Use publisher fingerprint from token as seed for consistent identity
-    const tokenRaw = localStorage.getItem("ec_token");
-    const seed = tokenRaw ? JSON.parse(tokenRaw)?.publisherId : null;
-    return getRandomCommentIdentity(seed || undefined);
+  // Get registered user info for commenting
+  const [currentUser, setCurrentUser] = useState<{ username: string; avatar: string | null } | null>(null);
+  useEffect(() => {
+    const raw = localStorage.getItem("ec_user");
+    if (raw) {
+      try { setCurrentUser(JSON.parse(raw)); } catch { /* ignore */ }
+    }
   }, []);
 
   // tRPC queries & mutations
@@ -431,15 +432,21 @@ export default function ListingDetail() {
                     comments.map((comment: any) => (
                       <div key={comment.id} className="flex gap-3">
                         {/* Avatar */}
-                        <div
-                          className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                          style={{
-                            background: comment.color
-                              ? `linear-gradient(135deg, ${comment.color}44, ${comment.color}66)`
-                              : "linear-gradient(135deg, #10b98144, #10b98166)",
-                          }}
-                        >
-                          {(comment.nickname || "匿")[0]}
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden">
+                          {comment.avatar ? (
+                            <img
+                              src={`/avatars/${comment.avatar}.png`}
+                              alt="avatar"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div
+                              className="h-full w-full rounded-full flex items-center justify-center text-xs font-bold text-white"
+                              style={{ background: "linear-gradient(135deg, #10b98144, #10b98166)" }}
+                            >
+                              {(comment.nickname || "匿")[0]}
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -467,34 +474,51 @@ export default function ListingDetail() {
                     {/* User avatar preview */}
                     <div
                       className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ background: commentIdentity.gradient }}
+                      style={{
+                        background: currentUser?.avatar
+                          ? undefined
+                          : "linear-gradient(135deg, #10b98144, #10b98166)",
+                      }}
                     >
-                      {commentIdentity.name[0]}
+                      {currentUser?.avatar ? (
+                        <img
+                          src={`/avatars/${currentUser.avatar}.png`}
+                          alt="avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        "?"
+                      )}
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-zinc-500 mb-2">
-                        你的昵称：<span className="text-zinc-300">{commentIdentity.name}</span>
+                        {currentUser ? (
+                          <>你的昵称：<span className="text-zinc-300">{currentUser.username}</span></>
+                        ) : (
+                          <span className="text-zinc-500">需要先<a href="#/register" className="text-emerald-400 hover:underline">注册身份</a>才能评论</span>
+                        )}
                       </p>
                       <div className="flex gap-2">
                         <Textarea
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          placeholder="写下你的评论..."
-                          className="flex-1 min-h-[60px] bg-[#0d0d14] border-white/5 text-zinc-200 placeholder:text-zinc-700 focus:border-emerald-500/30 focus:ring-emerald-500/10 text-sm"
+                          placeholder={currentUser ? "写下你的评论..." : "请先注册后再评论"}
+                          disabled={!currentUser}
+                          className="flex-1 min-h-[60px] bg-[#0d0d14] border-white/5 text-zinc-200 placeholder:text-zinc-700 focus:border-emerald-500/30 focus:ring-emerald-500/10 text-sm disabled:opacity-50"
                           maxLength={500}
                         />
                         <Button
                           onClick={() => {
-                            if (!commentText.trim()) return;
+                            if (!commentText.trim() || !currentUser) return;
                             commentMutation.mutate({
                               listingId,
                               content: commentText.trim(),
-                              nickname: commentIdentity.name,
-                              color: commentIdentity.color,
+                              nickname: currentUser.username,
+                              color: currentUser.avatar,
                             });
                           }}
-                          disabled={commentMutation.isPending || !commentText.trim()}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white self-end h-10 px-4"
+                          disabled={commentMutation.isPending || !commentText.trim() || !currentUser}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white self-end h-10 px-4 disabled:opacity-50"
                         >
                           {commentMutation.isPending ? (
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

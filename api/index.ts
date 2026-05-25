@@ -254,6 +254,59 @@ export default async function handler(request) {
       return json({ result: { data: { publisherId: id, signature } } });
     }
 
+    // === user.register (POST) ===
+    if (path === "user.register" && request.method === "POST") {
+      const body = await request.json();
+      const { username, avatar, fingerprint } = body;
+
+      // Validation
+      if (!username?.trim()) return json({ error: { message: "请输入用户名" } }, 400);
+      const trimmed = username.trim();
+      if (trimmed.length < 2 || trimmed.length > 16) return json({ error: { message: "用户名2-16个字符" } }, 400);
+      if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]+$/.test(trimmed)) return json({ error: { message: "用户名只能包含中文、英文、数字和下划线" } }, 400);
+
+      // Create users table if not exists
+      await executeSql(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        avatar TEXT,
+        fingerprint TEXT UNIQUE,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )`);
+
+      // Check username uniqueness
+      const check = await executeSql("SELECT id FROM users WHERE username = ? LIMIT 1", [trimmed]);
+      if (check[0]?.rows?.length) return json({ error: { message: "用户名已被使用" } }, 400);
+
+      // Check if fingerprint already registered
+      if (fingerprint) {
+        const fpCheck = await executeSql("SELECT id FROM users WHERE fingerprint = ? LIMIT 1", [fingerprint]);
+        if (fpCheck[0]?.rows?.length) return json({ error: { message: "你已注册过账号" } }, 400);
+      }
+
+      // Insert user
+      await executeSql("INSERT INTO users (username, avatar, fingerprint) VALUES (?, ?, ?)", [trimmed, avatar || null, fingerprint || null]);
+      return json({ result: { data: { success: true, username: trimmed } } });
+    }
+
+    // === user.checkUsername ===
+    if (path === "user.checkUsername") {
+      const username = url.searchParams.get("username")?.trim();
+      if (!username) return json({ result: { data: { available: false } } });
+      const check = await executeSql("SELECT id FROM users WHERE username = ? LIMIT 1", [username]);
+      return json({ result: { data: { available: !check[0]?.rows?.length } } });
+    }
+
+    // === user.getMe ===
+    if (path === "user.getMe") {
+      const fingerprint = url.searchParams.get("fingerprint");
+      if (!fingerprint) return json({ result: { data: null } });
+      const results = await executeSql("SELECT id, username, avatar, created_at FROM users WHERE fingerprint = ? LIMIT 1", [fingerprint]);
+      if (!results[0]?.rows?.length) return json({ result: { data: null } });
+      const r = results[0].rows[0];
+      return json({ result: { data: { id: Number(r[0]), username: String(r[1] || ""), avatar: r[2] || null, createdAt: r[3] || null } } });
+    }
+
     // === listing.list ===
     if (path === "listing.list" || path === "") {
       const category = url.searchParams.get("category") || undefined;
