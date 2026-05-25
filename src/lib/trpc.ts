@@ -183,7 +183,13 @@ export const trpc = {
         const mutate = async (body: any) => {
           setPending(true);
           try {
-            const res = await post("listing.delete", body);
+            const verifyRaw = sessionStorage.getItem("ec_verify");
+            const verifyData = verifyRaw ? JSON.parse(verifyRaw) : null;
+            const humanToken = verifyData?.token || "";
+            if (!humanToken || Date.now() > (verifyData?.expiresAt || 0)) {
+              throw new Error("人机验证已过期，请重新验证");
+            }
+            const res = await post("listing.delete", { ...body, humanToken });
             opts?.onSuccess?.();
             return res;
           } catch (err: any) {
@@ -202,7 +208,13 @@ export const trpc = {
         const mutate = async (body: any) => {
           setPending(true);
           try {
-            const res = await post("listing.update", body);
+            const verifyRaw = sessionStorage.getItem("ec_verify");
+            const verifyData = verifyRaw ? JSON.parse(verifyRaw) : null;
+            const humanToken = verifyData?.token || "";
+            if (!humanToken || Date.now() > (verifyData?.expiresAt || 0)) {
+              throw new Error("人机验证已过期，请重新验证");
+            }
+            const res = await post("listing.update", { ...body, humanToken });
             opts?.onSuccess?.();
             return res;
           } catch (err: any) {

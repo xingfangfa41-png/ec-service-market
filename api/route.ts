@@ -60,6 +60,21 @@ async function generatePublisherId() {
   return { id, signature };
 }
 
+// Validate human verification token
+function validateHumanToken(humanToken: string): string | null {
+  if (!humanToken || typeof humanToken !== "string" || humanToken.length < 20) {
+    return "请先完成人机验证";
+  }
+  const parts = humanToken.split(":");
+  if (parts.length !== 3) return "验证令牌格式错误";
+  const timestamp = parseInt(parts[1]);
+  const age = Date.now() - timestamp;
+  if (isNaN(timestamp) || age < 0 || age > 10 * 60 * 1000) {
+    return "人机验证已过期，请重新验证";
+  }
+  return null;
+}
+
 // IP-based rate limiting
 const ipPostCounts = new Map<string, { count: number; resetTime: number }>();
 const ipLastPost = new Map<string, number>();
@@ -215,7 +230,9 @@ export default async function handler(request: Request) {
     // === listing.delete (POST) ===
     if (path === "listing.delete" && request.method === "POST") {
       const body = await request.json();
-      const { id, publisherId, signature } = body;
+      const { id, publisherId, signature, humanToken } = body;
+      const tokenErr = validateHumanToken(humanToken);
+      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
       const sigValid = await verifyPublisherId(publisherId, signature);
       if (!sigValid) return json({ error: { message: "非法请求" } }, 403);
       const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
@@ -228,7 +245,9 @@ export default async function handler(request: Request) {
     // === listing.update (POST) ===
     if (path === "listing.update" && request.method === "POST") {
       const body = await request.json();
-      const { id, publisherId, signature, category, title, description, serverName, price, contactType, contactValue } = body;
+      const { id, publisherId, signature, humanToken, category, title, description, serverName, price, contactType, contactValue } = body;
+      const tokenErr = validateHumanToken(humanToken);
+      if (tokenErr) return json({ error: { message: tokenErr } }, 403);
       const sigValid = await verifyPublisherId(publisherId, signature);
       if (!sigValid) return json({ error: { message: "非法请求" } }, 403);
       const results = await executeSql("SELECT publisher_id FROM listings WHERE id = ?", [id]);
