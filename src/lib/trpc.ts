@@ -129,7 +129,7 @@ export const trpc = {
 
         useEffect(() => { fetchData(); }, [input.id]);
 
-        return { data, isLoading, error: error ? { message: error.message } : null };
+        return { data, isLoading, error: error ? { message: error.message } : null, refetch: fetchData };
       },
     },
     cooldownStatus: {
@@ -145,7 +145,7 @@ export const trpc = {
 
         useEffect(() => { fetchData(); }, []);
 
-        return { data };
+        return { data, refetch: fetchData };
       },
     },
     create: {
@@ -246,7 +246,7 @@ export const trpc = {
 
         useEffect(() => { fetchData(); }, [input.listingId]);
 
-        return { data: data || [], isLoading };
+        return { data: data || [], isLoading, refetch: fetchData };
       },
     },
     create: {
