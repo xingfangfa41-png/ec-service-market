@@ -293,7 +293,7 @@ export default async function handler(request) {
       const results = await executeSql("SELECT id, username, avatar, created_at FROM users WHERE fingerprint = ? LIMIT 1", [fingerprint]);
       if (!results[0]?.rows?.length) return json({ result: { data: null } });
       const r = results[0].rows[0];
-      return json({ result: { data: { id: Number(r[0]), username: String(r[1] || ""), avatar: r[2] || null, createdAt: r[3] || null } } });
+      return json({ result: { data: { id: Number(extract(r, 0) || 0), username: String(extract(r, 1) || ""), avatar: extract(r, 2), createdAt: formatDate(extract(r, 3)) } } });
     }
 
     // === listing.list ===
@@ -414,12 +414,12 @@ export default async function handler(request) {
       );
       const rows = results[0]?.rows || [];
       const comments = rows.map((r) => ({
-        id: Number(r[0]),
-        listingId: Number(r[1]),
-        content: String(r[2] || ""),
-        nickname: r[3] || null,
-        color: r[4] || null,
-        createdAt: r[5] || null,
+        id: Number(extract(r, 0) || 0),
+        listingId: Number(extract(r, 1) || 0),
+        content: String(extract(r, 2) || ""),
+        nickname: extract(r, 3),
+        color: extract(r, 4),
+        createdAt: formatDate(extract(r, 5)),
       }));
       return json({ result: { data: comments } });
     }
