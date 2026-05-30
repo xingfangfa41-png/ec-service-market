@@ -418,7 +418,7 @@ export default async function handler(request) {
         listingId: Number(extract(r, 1) || 0),
         content: String(extract(r, 2) || ""),
         nickname: extract(r, 3),
-        color: extract(r, 4),
+        avatar: extract(r, 4),
         createdAt: formatDate(extract(r, 5)),
       }));
       return json({ result: { data: comments } });
