@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // Simple REST API client (replaces tRPC for Edge Runtime reliability)
 const API_BASE = "/api/trpc";
@@ -112,8 +112,9 @@ export const trpc = {
         const [data, setData] = useState<any | null>(null);
         const [isLoading, setLoading] = useState(true);
         const [error, setError] = useState<Error | null>(null);
+        const enabled = opts?.enabled !== false;
 
-        const fetchData = async () => {
+        const fetchData = useCallback(async () => {
           if (!input.id) { setLoading(false); return; }
           setLoading(true);
           setError(null);
@@ -125,12 +126,12 @@ export const trpc = {
           } finally {
             setLoading(false);
           }
-        };
+        }, [input.id]);
 
         useEffect(() => {
-          if (opts?.enabled === false) { setLoading(false); return; }
+          if (!enabled) { setLoading(false); return; }
           fetchData();
-        }, [input.id, opts?.enabled]);
+        }, [input.id, enabled, fetchData]);
 
         return { data, isLoading, error: error ? { message: error.message } : null, refetch: fetchData };
       },
@@ -236,8 +237,9 @@ export const trpc = {
       useQuery: (input: { listingId: number }, opts?: any) => {
         const [data, setData] = useState<any[] | null>(null);
         const [isLoading, setLoading] = useState(true);
+        const enabled = opts?.enabled !== false;
 
-        const fetchData = async () => {
+        const fetchData = useCallback(async () => {
           if (!input.listingId) { setLoading(false); return; }
           setLoading(true);
           try {
@@ -245,12 +247,12 @@ export const trpc = {
             setData(res.result?.data || []);
           } catch { setData([]); }
           finally { setLoading(false); }
-        };
+        }, [input.listingId]);
 
         useEffect(() => {
-          if (opts?.enabled === false) { setLoading(false); return; }
+          if (!enabled) { setLoading(false); return; }
           fetchData();
-        }, [input.listingId, opts?.enabled]);
+        }, [input.listingId, enabled, fetchData]);
 
         return { data: data || [], isLoading, refetch: fetchData };
       },
