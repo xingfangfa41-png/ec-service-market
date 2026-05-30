@@ -438,12 +438,19 @@ export default async function handler(request) {
       const ipLimit = checkIPLimit(clientIP);
       if (!ipLimit.allowed) return json({ error: { message: ipLimit.reason } }, 429);
 
-      // 4. Content validation
+      // 4. Check ban status
+      const banCheck = await executeSql("SELECT banned FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
+      if (banCheck[0]?.rows?.length) {
+        const banned = val(banCheck[0].rows[0][0]);
+        if (banned === 1 || banned === "1") return json({ error: { message: "你的账号已被封禁" } }, 403);
+      }
+
+      // 5. Content validation
       if (!category || !title?.trim() || title.trim().length < 3) return json({ error: { message: "标题至少3个字符" } }, 400);
       if (!description?.trim() || description.trim().length < 10) return json({ error: { message: "描述至少10个字符" } }, 400);
       if (!contactValue?.trim()) return json({ error: { message: "请填写联系方式" } }, 400);
 
-      // 5. Per-publisher cooldown
+      // 6. Per-publisher cooldown
       const pubResults = await executeSql("SELECT last_posted_at FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       const lastPosted = val(pubResults[0]?.rows?.[0]?.[0]);
       if (lastPosted) {
@@ -451,18 +458,18 @@ export default async function handler(request) {
         if (elapsed < COOLDOWN_MS) { const mins = Math.ceil((COOLDOWN_MS - elapsed) / 60000); return json({ error: { message: `发布太频繁，请等待 ${mins} 分钟后再试` } }, 400); }
       }
 
-      // 6. Ensure publisher exists
+      // 7. Ensure publisher exists
       const pubCheck = await executeSql("SELECT id FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       if (!pubCheck[0]?.rows?.length) await executeSql("INSERT INTO publishers (fingerprint) VALUES (?)", [publisherId]);
 
-      // 7. Insert listing
+      // 8. Insert listing
       const imageValue = body.image || null;
       await executeSql(
         `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId, imageValue]
       );
 
-      // 7. Update timestamp + record IP
+      // 9. Update timestamp + record IP
       await executeSql("UPDATE publishers SET last_posted_at = ? WHERE fingerprint = ?", [new Date().toISOString(), publisherId]);
       recordIPPost(clientIP);
 
