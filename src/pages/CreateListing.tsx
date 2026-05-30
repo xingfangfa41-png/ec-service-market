@@ -225,8 +225,8 @@ export default function CreateListing() {
                     size="sm"
                     className="bg-amber-600 hover:bg-amber-500 text-white h-8 text-xs"
                   >
-                    <LogIn className="h-3.5 w-3.5 mr-1" />
-                    去登录
+                    <User className="h-3.5 w-3.5 mr-1" />
+                    创建身份
                   </Button>
                   <Button
                     variant="ghost"

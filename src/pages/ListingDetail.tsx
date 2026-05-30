@@ -489,7 +489,7 @@ export default function ListingDetail() {
                         {currentUser ? (
                           <>你的昵称：<span className="text-zinc-300">{currentUser.username}</span></>
                         ) : (
-                          <span className="text-zinc-500">需要先<button onClick={() => navigate("/register?from=/listing/" + listingId)} className="text-emerald-400 hover:underline cursor-pointer bg-transparent border-none p-0">登录</button>才能评论</span>
+                          <span className="text-zinc-500">需要先<button onClick={() => navigate("/register?from=/listing/" + listingId)} className="text-emerald-400 hover:underline cursor-pointer bg-transparent border-none p-0">创建身份</button>才能评论</span>
                         )}
                       </p>
                       <div className="flex gap-2">
