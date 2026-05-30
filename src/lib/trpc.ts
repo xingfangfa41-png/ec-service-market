@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 // Simple REST API client (replaces tRPC for Edge Runtime reliability)
 const API_BASE = "/api/trpc";
@@ -112,9 +112,8 @@ export const trpc = {
         const [data, setData] = useState<any | null>(null);
         const [isLoading, setLoading] = useState(true);
         const [error, setError] = useState<Error | null>(null);
-        const enabled = opts?.enabled !== false;
 
-        const fetchData = useCallback(async () => {
+        const fetchData = async () => {
           if (!input.id) { setLoading(false); return; }
           setLoading(true);
           setError(null);
@@ -126,12 +125,13 @@ export const trpc = {
           } finally {
             setLoading(false);
           }
-        }, [input.id]);
+        };
 
         useEffect(() => {
-          if (!enabled) { setLoading(false); return; }
+          if (opts?.enabled === false) { setLoading(false); return; }
           fetchData();
-        }, [input.id, enabled, fetchData]);
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [input.id, opts?.enabled]);
 
         return { data, isLoading, error: error ? { message: error.message } : null, refetch: fetchData };
       },
@@ -237,9 +237,8 @@ export const trpc = {
       useQuery: (input: { listingId: number }, opts?: any) => {
         const [data, setData] = useState<any[] | null>(null);
         const [isLoading, setLoading] = useState(true);
-        const enabled = opts?.enabled !== false;
 
-        const fetchData = useCallback(async () => {
+        const fetchData = async () => {
           if (!input.listingId) { setLoading(false); return; }
           setLoading(true);
           try {
@@ -247,12 +246,13 @@ export const trpc = {
             setData(res.result?.data || []);
           } catch { setData([]); }
           finally { setLoading(false); }
-        }, [input.listingId]);
+        };
 
         useEffect(() => {
-          if (!enabled) { setLoading(false); return; }
+          if (opts?.enabled === false) { setLoading(false); return; }
           fetchData();
-        }, [input.listingId, enabled, fetchData]);
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [input.listingId, opts?.enabled]);
 
         return { data: data || [], isLoading, refetch: fetchData };
       },
