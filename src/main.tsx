@@ -1,15 +1,15 @@
 import "./lib/polyfill"; // iOS/Safari compatibility - must be first
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { HashRouter } from "react-router";
+import { BrowserRouter } from "react-router";
 import "./index.css";
-// force-rebuild: v5
+// force-rebuild: v6-browser-router
 import App from "./App.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <HashRouter>
+    <BrowserRouter>
       <App />
-    </HashRouter>
+    </BrowserRouter>
   </StrictMode>
 );
