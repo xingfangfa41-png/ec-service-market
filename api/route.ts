@@ -242,15 +242,26 @@ export default async function handler(request: Request) {
       const { image: base64Image } = body;
       if (!base64Image) return json({ error: { message: "请提供图片" } }, 400);
       try {
-        // Upload to Cloudinary using unsigned upload preset
+        // Upload to Cloudinary using signed upload
         const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-        const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
-        if (!cloudName || !uploadPreset) {
-          return json({ error: { message: "图床配置错误，请检查环境变量" } }, 500);
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+        if (!cloudName || !apiKey || !apiSecret) {
+          return json({ error: { message: "图床配置错误，请检查 CLOUDINARY_ 环境变量" } }, 500);
         }
+
+        // Generate signature for signed upload
+        const timestamp = Math.round(Date.now() / 1000);
+        const signatureStr = `timestamp=${timestamp}${apiSecret}`;
+        const signatureHash = await crypto.subtle.digest("SHA-1", strToBuf(signatureStr));
+        const signature = bufToHex(signatureHash);
+
         const formData = new FormData();
         formData.append("file", base64Image);
-        formData.append("upload_preset", uploadPreset);
+        formData.append("api_key", apiKey);
+        formData.append("timestamp", String(timestamp));
+        formData.append("signature", signature);
+
         const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
           method: "POST",
           body: formData,
