@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ElementType } from "react";
 import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
@@ -36,7 +37,7 @@ import {
 } from "lucide-react";
 
 
-const categoryIconMap: Record<string, React.ElementType> = {
+const categoryIconMap: Record<string, ElementType> = {
   "陪聊": MessageCircle,
   "找搭子": Users,
   "公会宣传": Shield,
