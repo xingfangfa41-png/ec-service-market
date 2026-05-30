@@ -38,6 +38,11 @@ export function isRegistered(): boolean {
   return getCurrentUser() !== null;
 }
 
+// Clear current user (logout)
+export function clearCurrentUser() {
+  localStorage.removeItem("ec_user");
+}
+
 // Available avatars
 export const AVATARS = [
   { id: "dragon", name: "小火龙", path: "/avatars/dragon.png" },

@@ -150,6 +150,14 @@ export default async function handler(request: Request) {
       return json({ result: { data: { id: Number(r[0]), username: String(r[1] || ""), avatar: r[2] || null, createdAt: r[3] || null } } });
     }
 
+    // === user.list ===
+    if (path === "user.list") {
+      const results = await executeSql("SELECT id, username, avatar, created_at FROM users ORDER BY created_at DESC LIMIT 1000");
+      const rows = results[0]?.rows || [];
+      const users = rows.map((r) => ({ id: Number(r[0]), username: String(r[1] || ""), avatar: r[2] || null, createdAt: r[3] || null }));
+      return json({ result: { data: users } });
+    }
+
     // === listing.list ===
     if (path === "listing.list" || path === "") {
       const category = url.searchParams.get("category") || undefined;

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { AVATARS } from "@/lib/user";
 import {
   Select,
   SelectContent,
@@ -472,10 +473,10 @@ export default function ListingDetail() {
                 <div className="p-5 border-t border-white/5">
                   <div className="flex gap-3">
                     {/* User avatar preview */}
-                    <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden">
-                      {currentUser?.avatar ? (
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden bg-emerald-500/10">
+                      {currentUser ? (
                         <img
-                          src={`/avatars/${currentUser.avatar}.png`}
+                          src={AVATARS.find(a => a.id === currentUser.avatar)?.path || AVATARS[0].path}
                           alt="avatar"
                           className="w-full h-full object-cover"
                         />
@@ -488,7 +489,7 @@ export default function ListingDetail() {
                         {currentUser ? (
                           <>你的昵称：<span className="text-zinc-300">{currentUser.username}</span></>
                         ) : (
-                          <span className="text-zinc-500">需要先<a href="#/register" className="text-emerald-400 hover:underline">注册身份</a>才能评论</span>
+                          <span className="text-zinc-500">需要先<button onClick={() => navigate("/register?from=/listing/" + listingId)} className="text-emerald-400 hover:underline cursor-pointer bg-transparent border-none p-0">登录</button>才能评论</span>
                         )}
                       </p>
                       <div className="flex gap-2">

@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
 import SiteNavPanel from "@/components/SiteNavPanel";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser, clearCurrentUser, AVATARS } from "@/lib/user";
 import {
   Plus,
   MessageCircle,
@@ -15,6 +16,9 @@ import {
   Server,
   Tag,
   ImageIcon,
+  User,
+  LogOut,
+  Settings,
 } from "lucide-react";
 
 // Listing type matching backend Drizzle schema (camelCase)
@@ -54,6 +58,8 @@ function getCategoryBadgeClass(category: string) {
 export default function Home() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("all");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const currentUser = getCurrentUser();
 
   // tRPC queries
   const { data: listings = [], isLoading, error: rpcError, refetch } = trpc.listing.list.useQuery(
@@ -79,9 +85,66 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <SiteNavPanel />
+            {/* User menu or login */}
+            {currentUser ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex h-9 items-center gap-2 rounded-lg bg-white/5 px-2 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <div className="h-6 w-6 rounded-full overflow-hidden bg-emerald-500/10">
+                    <img
+                      src={AVATARS.find(a => a.id === currentUser.avatar)?.path || AVATARS[0].path}
+                      alt="avatar"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+                  <span className="text-sm text-zinc-300 max-w-[80px] truncate hidden sm:block">{currentUser.username}</span>
+                </button>
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 top-12 z-50 w-48 rounded-xl bg-[#16161f] border border-white/10 shadow-2xl overflow-hidden">
+                      <div className="px-4 py-3 border-b border-white/5">
+                        <p className="text-sm font-medium text-white">{currentUser.username}</p>
+                        <p className="text-xs text-zinc-500">当前用户</p>
+                      </div>
+                      <button
+                        onClick={() => { navigate("/register?from=/"); setUserMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors text-left cursor-pointer"
+                      >
+                        <Settings className="h-4 w-4" />
+                        切换账号
+                      </button>
+                      <button
+                        onClick={() => { clearCurrentUser(); setUserMenuOpen(false); window.location.reload(); }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors text-left cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        退出登录
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={() => navigate("/register?from=/")}
+                variant="ghost"
+                className="text-zinc-400 hover:text-white hover:bg-white/5 h-9 gap-2"
+              >
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">登录</span>
+              </Button>
+            )}
             <Button
               onClick={() => {
-                navigate("/register");
+                if (!currentUser) {
+                  navigate("/register?from=/create");
+                  return;
+                }
+                navigate("/create");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 h-9 px-4 text-sm"
             >
@@ -220,7 +283,11 @@ export default function Home() {
             <p className="text-sm text-zinc-600 mb-6">成为第一个发布的人吧</p>
             <Button
               onClick={() => {
-                navigate("/register");
+                if (!currentUser) {
+                  navigate("/register?from=/create");
+                  return;
+                }
+                navigate("/create");
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2"
             >

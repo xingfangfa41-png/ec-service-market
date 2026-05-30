@@ -22,6 +22,8 @@ import {
   ImagePlus,
   X,
   Clock,
+  User,
+  LogIn,
 } from "lucide-react";
 
 const categories = [
@@ -41,14 +43,14 @@ function formatCooldown(seconds: number): string {
 export default function CreateListing() {
   const navigate = useNavigate();
 
-  // Check if user is registered (must register to post)
+  // Check if user is registered
+  const [currentUser, setCurrentUser] = useState<{ username: string; avatar: string | null } | null>(null);
   useEffect(() => {
     const userRaw = localStorage.getItem("ec_user");
-    if (!userRaw) {
-      navigate("/register");
-      return;
+    if (userRaw) {
+      try { setCurrentUser(JSON.parse(userRaw)); } catch { setCurrentUser(null); }
     }
-  }, [navigate]);
+  }, []);
 
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
@@ -206,6 +208,39 @@ export default function CreateListing() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-6">
+
+        {/* Not logged in prompt */}
+        {!currentUser && (
+          <div className="mb-6 rounded-xl bg-amber-500/8 border border-amber-500/20 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                <User className="h-5 w-5 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-300 mb-1">需要先登录才能发布帖子</p>
+                <p className="text-xs text-amber-500/70 mb-3">登录后你可以发布帖子、评论、管理自己的内容</p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => navigate("/register?from=/create")}
+                    size="sm"
+                    className="bg-amber-600 hover:bg-amber-500 text-white h-8 text-xs"
+                  >
+                    <LogIn className="h-3.5 w-3.5 mr-1" />
+                    去登录
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/")}
+                    className="text-amber-500/70 hover:text-amber-400 h-8 text-xs"
+                  >
+                    返回首页
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {cooldownSeconds > 0 && (
           <div className="mb-4 rounded-lg bg-orange-500/10 border border-orange-500/20 px-4 py-3 text-sm text-orange-400 flex items-center gap-2">
