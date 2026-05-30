@@ -72,10 +72,10 @@ export async function createListing(data: {
   contactType: string;
   contactValue: string;
   publisherId: string;
-}): Promise<Listing> {
+}, image?: string): Promise<Listing> {
   const results = await executeSql(
     `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      RETURNING *`,
     [
       data.category,
@@ -86,6 +86,7 @@ export async function createListing(data: {
       data.contactType,
       data.contactValue,
       data.publisherId,
+      image || null,
     ]
   );
 

@@ -236,10 +236,40 @@ export default async function handler(request: Request) {
       return json({ result: { data: comments } });
     }
 
+    // === upload.image (POST) ===
+    if (path === "upload.image" && request.method === "POST") {
+      const body = await request.json();
+      const { image: base64Image } = body;
+      if (!base64Image) return json({ error: { message: "请提供图片" } }, 400);
+      try {
+        // Upload to Cloudinary using unsigned upload preset
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+        if (!cloudName || !uploadPreset) {
+          return json({ error: { message: "图床配置错误，请检查环境变量" } }, 500);
+        }
+        const formData = new FormData();
+        formData.append("file", base64Image);
+        formData.append("upload_preset", uploadPreset);
+        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json().catch(() => ({}));
+          return json({ error: { message: errData.error?.message || "图片上传失败" } }, 500);
+        }
+        const uploadData = await uploadRes.json();
+        return json({ result: { data: { url: uploadData.secure_url } } });
+      } catch (err: any) {
+        return json({ error: { message: err?.message || "图片上传失败" } }, 500);
+      }
+    }
+
     // === listing.create (POST) ===
     if (path === "listing.create" && request.method === "POST") {
       const body = await request.json();
-      const { category, title, description, serverName, price, contactType, contactValue, publisherId, signature } = body;
+      const { category, title, description, serverName, price, contactType, contactValue, publisherId, signature, image } = body;
 
       // Verify signature
       const sigValid = await verifyPublisherId(publisherId, signature);
@@ -264,7 +294,7 @@ export default async function handler(request: Request) {
 
       const pubCheck = await executeSql("SELECT id FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       if (!pubCheck[0]?.rows?.length) await executeSql("INSERT INTO publishers (fingerprint) VALUES (?)", [publisherId]);
-      await executeSql(`INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`, [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId]);
+      await executeSql(`INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId, image || null]);
       await executeSql("UPDATE publishers SET last_posted_at = ? WHERE fingerprint = ?", [new Date().toISOString(), publisherId]);
       recordIPPost(clientIP);
       return json({ result: { data: { success: true } } });

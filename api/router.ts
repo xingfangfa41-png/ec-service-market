@@ -63,6 +63,7 @@ export const appRouter = createRouter({
           contactType: z.enum(["wechat", "qq"]),
           contactValue: z.string().min(1).max(200),
           publisherId: z.string().uuid().max(255),
+          image: z.string().max(1000).optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -96,7 +97,7 @@ export const appRouter = createRouter({
           ...input,
           title,
           description,
-        });
+        }, input.image);
 
         // 7. Update last posted timestamp
         await updatePublisherLastPosted(input.publisherId);

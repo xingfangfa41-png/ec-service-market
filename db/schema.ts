@@ -11,6 +11,7 @@ export const listings = sqliteTable("listings", {
   contactType: text("contact_type", { length: 20 }).notNull(), // "wechat" | "qq"
   contactValue: text("contact_value", { length: 200 }).notNull(),
   publisherId: text("publisher_id", { length: 255 }).notNull(),
+  image: text("image"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 

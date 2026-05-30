@@ -65,9 +65,7 @@ export default function CreateListing() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Check cooldown status (token with signature is auto-managed by trpc client)
-  const { data: cooldownData, refetch: refetchCooldown } = trpc.listing.cooldownStatus.useQuery(
-    { refetchInterval: cooldownSeconds > 0 ? 5000 : false }
-  );
+  const { data: cooldownData, refetch: refetchCooldown } = trpc.listing.cooldownStatus.useQuery();
 
   // Cooldown countdown timer
   useEffect(() => {
