@@ -114,7 +114,7 @@ export const trpc = {
         const [error, setError] = useState<Error | null>(null);
 
         const fetchData = async () => {
-          if (!input.id) return;
+          if (!input.id) { setLoading(false); return; }
           setLoading(true);
           setError(null);
           try {
@@ -127,7 +127,10 @@ export const trpc = {
           }
         };
 
-        useEffect(() => { fetchData(); }, [input.id]);
+        useEffect(() => {
+          if (opts?.enabled === false) { setLoading(false); return; }
+          fetchData();
+        }, [input.id, opts?.enabled]);
 
         return { data, isLoading, error: error ? { message: error.message } : null, refetch: fetchData };
       },
@@ -235,7 +238,7 @@ export const trpc = {
         const [isLoading, setLoading] = useState(true);
 
         const fetchData = async () => {
-          if (!input.listingId) return;
+          if (!input.listingId) { setLoading(false); return; }
           setLoading(true);
           try {
             const res = await get("comment.list", { listingId: String(input.listingId) });
@@ -244,7 +247,10 @@ export const trpc = {
           finally { setLoading(false); }
         };
 
-        useEffect(() => { fetchData(); }, [input.listingId]);
+        useEffect(() => {
+          if (opts?.enabled === false) { setLoading(false); return; }
+          fetchData();
+        }, [input.listingId, opts?.enabled]);
 
         return { data: data || [], isLoading, refetch: fetchData };
       },
