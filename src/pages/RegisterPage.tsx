@@ -162,6 +162,13 @@ function SliderCaptcha({ onVerify }: { onVerify: () => void }) {
 // ─── Main Register Page ───
 export default function RegisterPage() {
   const navigate = useNavigate();
+
+  // Clear any old cached user data on mount (force fresh identity)
+  useEffect(() => {
+    localStorage.removeItem("ec_user");
+    localStorage.removeItem("ec_verify");
+  }, []);
+
   const [username] = useState(generateRandomUsername);
   const [selectedAvatar] = useState(generateRandomAvatar);
   const [captchaVerified, setCaptchaVerified] = useState(false);

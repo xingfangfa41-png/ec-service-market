@@ -1,14 +1,33 @@
 // User management - stores registered user info
 
+const STORAGE_VERSION = "2"; // bump to invalidate old cached data
+
 export interface User {
   id: number;
   username: string;
   avatar: string | null;
 }
 
+/** Auto-clear old data when version changes */
+function checkStorageVersion() {
+  try {
+    const v = localStorage.getItem("ec_version");
+    if (v !== STORAGE_VERSION) {
+      localStorage.removeItem("ec_user");
+      localStorage.removeItem("ec_token");
+      localStorage.removeItem("ec_verify");
+      localStorage.setItem("ec_version", STORAGE_VERSION);
+    }
+  } catch { /* ignore */ }
+}
+
+// Run version check on module load
+checkStorageVersion();
+
 // Get current user from localStorage
 export function getCurrentUser(): User | null {
   try {
+    checkStorageVersion();
     const raw = localStorage.getItem("ec_user");
     if (!raw) return null;
     return JSON.parse(raw);
