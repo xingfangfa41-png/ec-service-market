@@ -283,7 +283,11 @@ fetch(BASE+"manifest.json")
 /* 尝试无手势续播（多数桌面浏览器允许；QQ/微信会被拒，转由首次手势触发） */
 function tryResume(){
   if(!bgPlay) return;   // 关闭后台播放：不自动续播
-  if(lockHeldByOther()) return;   // 别的标签页正在播（含 market 子域）：不叠加
+  if(lockHeldByOther()){
+    /* 旧实例（如跳走前的 bfcache 页面）可能还握着锁：等它过期后重试接管，而不是永久放弃 */
+    setTimeout(function(){ if(!playing && bgPlay && !lockHeldByOther()){ var st=load(); if(st&&st.play) tryResume(); } }, 5500);
+    return;
+  }
   ensureCtx().then(function(){
     if(ctx.state==="running"){ doPlay(); }
     else{ bindGestureResume(); }
@@ -291,14 +295,22 @@ function tryResume(){
 }
 /* 供其他页面调用：本页"上次在播放"时恢复（供 trends 等页 onload 调用，替代开屏手势） */
 function resumeIfPlayed(){
+  var _dbg = function(m){ try{ console.log("[NBS]", m); }catch(e){} };
+  _dbg("resumeIfPlayed bg=" + bgPlay);
   if(!bgPlay) return;   // 关闭后台播放：跨页不续播
-  if(lockHeldByOther()) return;   // 别的标签页正在播：不叠加
+  _dbg("lockHeldByOther=" + lockHeldByOther());
+  if(lockHeldByOther()){
+    setTimeout(function(){ if(!playing && bgPlay && !lockHeldByOther()){ resumeIfPlayed(); } }, 5500);
+    return;
+  }
   var st=load();
+  _dbg("st.play=" + (st&&st.play) + " playing=" + playing + " song=" + !!song);
   if(st&&st.play && !playing){
     ensureCtx().then(function(){
-      if(ctx.state==="running"){ doPlay(); }
-      else{ bindGestureResume(); }
-    });
+      _dbg("ctx.state=" + ctx.state);
+      if(ctx.state==="running"){ doPlay(); _dbg("doPlay called, playing=" + playing); }
+      else{ bindGestureResume(); _dbg("bound gesture resume"); }
+    }).catch(function(e){ _dbg("ensureCtx err: " + e); });
   }
 }
 /* QQ/微信：首次任意触摸/点击即恢复播放 */
