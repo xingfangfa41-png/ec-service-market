@@ -41,8 +41,19 @@ try{
   if(/(^|\.)ec-crystal-war\.com$/.test(_h)) COOKIE_DOM = ";domain=.ec-crystal-war.com";
 }catch(e){}
 function save(){
+  var playIntent = playing;
+  /* 自己没在播但别的实例握着播放锁（页面藏后台/跳走时的存档）：
+     不得把"没在播"写进共享状态，否则会把正在播放的实例/下个页面的续播意图覆盖掉 */
+  if(!playing && typeof lockHeldByOther === "function" && lockHeldByOther()){
+    var cur = null;
+    try{
+      var m = document.cookie.match(/(?:^|;\s*)EC_NBS=([^;]*)/);
+      if(m) cur = JSON.parse(decodeURIComponent(m[1]));
+    }catch(e){}
+    if(cur && cur.play) playIntent = true;
+  }
   var s = JSON.stringify({
-    i:curIdx, t:curTick(), play:playing, vol:vol, muted:muted, loop:loopMode, style:styleMode, bg:bgPlay, ts:Date.now()
+    i:curIdx, t:curTick(), play:playIntent, vol:vol, muted:muted, loop:loopMode, style:styleMode, bg:bgPlay, ts:Date.now()
   });
   try{ localStorage.setItem("EC_NBS", s); }catch(e){}
   try{ document.cookie = "EC_NBS=" + encodeURIComponent(s) + ";path=/;max-age=31536000;SameSite=Lax" + COOKIE_DOM; }catch(e){}
