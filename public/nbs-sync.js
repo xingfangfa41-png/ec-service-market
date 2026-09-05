@@ -40,26 +40,22 @@ try{
   var _h = location.hostname;
   if(/(^|\.)ec-crystal-war\.com$/.test(_h)) COOKIE_DOM = ";domain=.ec-crystal-war.com";
 }catch(e){}
-var _forceWrite = false;   // 主动暂停/操作时强制写共享状态（v:2 里 play:false ⟺ 用户明确暂停）
+var _forceWrite = false;   // 主动暂停/操作时强制写共享状态（不被锁防覆盖挡住）
 function save(){
   var playIntent = playing;
-  /* 没在播时的顺带保存（切页/调音量/切歌前的快照等）：不得把"没在播"当成"已暂停"写进去——
-     否则①从未开播的新访客被打上假暂停指纹（开屏首播无声的根因）；
-         ②会覆盖掉别处正在播放的实例/下个页面的续播意图。
-     此处一律保留现有意图；全站唯一的 play:false 来源是 _forceWrite（用户明确暂停） */
-  if(!playing && !_forceWrite){
+  /* 自己没在播但别的实例握着播放锁（页面藏后台/跳走时的存档）：
+     不得把"没在播"写进共享状态，否则会把正在播放的实例/下个页面的续播意图覆盖掉。
+     例外：_forceWrite（用户主动点了暂停/操作）——主动意图必须生效 */
+  if(!playing && !_forceWrite && typeof lockHeldByOther === "function" && lockHeldByOther()){
     var cur = null;
     try{
       var m = document.cookie.match(/(?:^|;\s*)EC_NBS=([^;]*)/);
       if(m) cur = JSON.parse(decodeURIComponent(m[1]));
     }catch(e){}
-    if(!cur){ try{ cur = JSON.parse(localStorage.getItem("EC_NBS")||"null"); }catch(e2){} }
-    if(!cur) playIntent = true;                 /* 全新访客：默认意图=播（真开播由开屏/手势触发） */
-    else if(intendPlay(cur)) playIntent = true; /* 在播意图或旧版不可信状态：保持/迁移为播 */
-    else playIntent = false;                    /* v:2 明确暂停：原样保留 */
+    if(cur && cur.play) playIntent = true;
   }
   var s = JSON.stringify({
-    v:2, i:curIdx, t:curTick(), play:playIntent, vol:vol, muted:muted, loop:loopMode, style:styleMode, bg:bgPlay, ts:Date.now()
+    i:curIdx, t:curTick(), play:playIntent, vol:vol, muted:muted, loop:loopMode, style:styleMode, bg:bgPlay, ts:Date.now()
   });
   try{ localStorage.setItem("EC_NBS", s); }catch(e){}
   try{ document.cookie = "EC_NBS=" + encodeURIComponent(s) + ";path=/;max-age=31536000;SameSite=Lax" + COOKIE_DOM; }catch(e){}
@@ -70,16 +66,6 @@ function load(){
     if(m) return JSON.parse(decodeURIComponent(m[1]));
   }catch(e){}
   try{ return JSON.parse(localStorage.getItem("EC_NBS")||"null"); }catch(e){ return null; }
-}
-/* 播放意图判定（含旧版状态迁移）：
-   v:2 起 play 字段只由"真实播放行为 / 用户明确暂停"写出，可信；
-   旧版状态（无 v 字段）的 play:false 不可信——老引擎曾在启动加载谱面时无差别写入，
-   大批老访客的 cookie 里因此留着假的"已暂停"。对这些遗留状态一律按默认开播处理，
-   自 v:2 起用户的明确暂停才被记住。 */
-function intendPlay(st){
-  if(!st) return true;         /* 全新访客：默认开 */
-  if(st.v !== 2) return true;  /* 旧版遗留：play:false 不可信，按默认开 */
-  return !!st.play;
 }
 
 /* ---------- 音频上下文 ---------- */
@@ -199,14 +185,7 @@ function loadTrack(idx, autoplay){
   emit();
   return fetch(BASE+item.file)
     .then(function(r){return r.json();})
-    .then(function(j){
-      song=j;
-      /* 此处不得无条件 save()：启动加载时 playing=false，会把"未在播"写进共享状态，
-         制造出一个假的"用户已暂停"指纹，导致开屏/续播时 playUnlessPaused() 静默拒播。
-         真正需要持久化的路径各自负责：doPlay() 开播后 save()，用户主动操作各自 save() */
-      if(autoplay||_pendingPlay){ _pendingPlay=false; doPlay(); }
-      emit();
-    });
+    .then(function(j){ song=j; save(); if(autoplay||_pendingPlay){ _pendingPlay=false; doPlay(); } emit(); });
 }
 /* 跨页面/重复实例防护：同源多页或 bfcache 重载时，避免两个引擎同时出声 */
 var _bc = null, _myId = Math.random().toString(36).slice(2) + Date.now();
@@ -250,8 +229,7 @@ setInterval(function(){
      → 用户明确关了音乐，本实例也停（pause 是全站意图，不是单页面的） */
   if(playing){
     var st0 = load();
-    /* 只认 v:2 的明确暂停；旧版引擎的遗留/误写状态不能叫停正在播放的实例 */
-    if(st0 && st0.v===2 && !st0.play && st0.ts > _playStartedAt){
+    if(st0 && !st0.play && st0.ts > _playStartedAt){
       playing=false; clearInterval(schedTimer); stopSrcs(); save(); emit();
       return;
     }
@@ -266,7 +244,7 @@ setInterval(function(){
   /* 锁已过期但共享意图是"在播"（原播放标签已关闭/冻结）：本页面接管续播 */
   if(!playing && bgPlay && !lockHeldByOther()){
     var st = load();
-    if(st && intendPlay(st)){
+    if(st && st.play){
       if(ctx && ctx.state === "running"){ doPlay(); }
       else{ bindGestureResume(); }
     }
@@ -315,23 +293,17 @@ fetch(BASE+"manifest.json")
     loadTrack(idx,false).then(function(){
       if(st&&st.t){ offsetTick=Math.min(st.t,song.length); notePtr=findPtr(offsetTick); }
       /* 若上次在播放且本次无需手势（部分浏览器允许），尝试直接续播；否则等待手势 */
-      if(intendPlay(st)){ tryResume(); }
+      if(st&&st.play){ tryResume(); }
       emit();
     });
   }).catch(function(){});
-
-/* 启动即武装手势续播：不等谱面/清单加载、不等旧页面的锁过期——
-   落到本页后的第一次交互（点链接、点空白、触摸）就按当时状态判定是否开播，
-   消除旧版"锁等待 5.5s 期间的首触被漏接"死窗 */
-try{ var _st0 = load(); if(intendPlay(_st0)){ bindGestureResume(); } }catch(e){}
 
 /* 尝试无手势续播（多数桌面浏览器允许；QQ/微信会被拒，转由首次手势触发） */
 function tryResume(){
   if(!bgPlay) return;   // 关闭后台播放：不自动续播
   if(lockHeldByOther()){
-    /* 旧实例（如跳走前的 bfcache 页面）可能还握着锁：等它过期后重试接管，而不是永久放弃。
-       正常跳页时旧页面 pagehide 会主动放锁，这里通常一次就过 */
-    setTimeout(function(){ if(!playing && bgPlay && !lockHeldByOther()){ var st=load(); if(intendPlay(st)) tryResume(); } }, 5500);
+    /* 旧实例（如跳走前的 bfcache 页面）可能还握着锁：等它过期后重试接管，而不是永久放弃 */
+    setTimeout(function(){ if(!playing && bgPlay && !lockHeldByOther()){ var st=load(); if(st&&st.play) tryResume(); } }, 5500);
     return;
   }
   ensureCtx().then(function(){
@@ -347,29 +319,23 @@ function resumeIfPlayed(){
     return;
   }
   var st=load();
-  if(intendPlay(st) && !playing){
+  if(st&&st.play && !playing){
     ensureCtx().then(function(){
       if(ctx.state==="running"){ doPlay(); }
       else{ bindGestureResume(); }
     });
   }
 }
-/* QQ/微信：首次任意触摸/点击即恢复播放。
-   注意：handler 里重新读状态再判定——武装时和触发时之间，用户可能在别的页面明确暂停过 */
+/* QQ/微信：首次任意触摸/点击即恢复播放 */
 var gestureBound=false;
 function bindGestureResume(){
   if(gestureBound) return; gestureBound=true;
-  var unbind=function(){
+  var h=function(){
+    var st=load();
+    if(st&&st.play && !playing){ ensureCtx().then(function(){ if(ctx.resume)ctx.resume(); doPlay(); }); }
     document.removeEventListener("pointerdown",h,true);
     document.removeEventListener("touchstart",h,true);
     document.removeEventListener("keydown",h,true);
-  };
-  var h=function(){
-    if(playing){ unbind(); return; }
-    var st=load();
-    if(!intendPlay(st)){ unbind(); return; }   /* 用户明确暂停过：手势不再自动开播 */
-    if(lockHeldByOther()) return;              /* 别的页面正在播：保持待命，等锁释放 */
-    ensureCtx().then(function(){ if(ctx.resume)ctx.resume(); doPlay(); unbind(); });
   };
   document.addEventListener("pointerdown",h,true);
   document.addEventListener("touchstart",h,true);
@@ -378,12 +344,7 @@ function bindGestureResume(){
 
 /* 切页/隐藏前保存；关闭后台播放时：切后台（切App/锁屏/切标签）自动暂停，回前台自动恢复 */
 var bgAutoPaused=false;
-window.addEventListener("pagehide",function(){
-  save();
-  /* 本页即将卸载或进 bfcache：主动释放播放锁，让下一个页面零延迟接管续播，
-     不再等 5 秒锁过期（旧版跨页续播的等待空窗就是这么来的） */
-  try{ var l=lockHolder(); if(l && l.id===_myId){ document.cookie="ec_nbs_lock=;path=/;max-age=0;SameSite=Lax"+COOKIE_DOM; } }catch(e){}
-});
+window.addEventListener("pagehide",save);
 document.addEventListener("visibilitychange",function(){
   if(document.hidden){
     save();
@@ -398,7 +359,7 @@ document.addEventListener("visibilitychange",function(){
 window.addEventListener("pageshow",function(e){
   if(e.persisted){
     var st = load();
-    if(playing && st && st.v===2 && !st.play){ doPause(); return; }
+    if(playing && st && !st.play){ doPause(); return; }
     if(playing){ emit(); }
   }
 });
@@ -432,8 +393,8 @@ var api = {
   select:function(i){ doPause(); loadTrack(i,true); },
   onChange:function(f){ if(typeof f==="function") listeners.push(f); },
   resumeIfPlayed: resumeIfPlayed,
-  /* 开屏手势用：首次访问（无状态）/旧版不可信状态/上次在播 → 开播；仅 v:2 的明确暂停才不自动播 */
-  playUnlessPaused:function(){ var st=load(); if(intendPlay(st)){ api.play(); } },
+  /* 开屏手势用：首次访问（无状态）或上次在播 → 开播；用户在任何页面明确关过 → 不自动播 */
+  playUnlessPaused:function(){ var st=load(); if(!st || st.play){ api.play(); } },
   setStyle:function(m){ if(m!=="hifi"&&m!=="raw")return; styleMode=m; applyStyleRouting(); save(); emit(); },
   getStyle:function(){ return styleMode; },
   getAnalyser:function(){ return analyser; },
