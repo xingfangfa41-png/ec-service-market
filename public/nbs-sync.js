@@ -40,13 +40,11 @@ try{
   var _h = location.hostname;
   if(/(^|\.)ec-crystal-war\.com$/.test(_h)) COOKIE_DOM = ";domain=.ec-crystal-war.com";
 }catch(e){}
-var _forceWrite = false;   // 主动暂停/操作时强制写共享状态（不被锁防覆盖挡住）
 function save(){
   var playIntent = playing;
   /* 自己没在播但别的实例握着播放锁（页面藏后台/跳走时的存档）：
-     不得把"没在播"写进共享状态，否则会把正在播放的实例/下个页面的续播意图覆盖掉。
-     例外：_forceWrite（用户主动点了暂停/操作）——主动意图必须生效 */
-  if(!playing && !_forceWrite && typeof lockHeldByOther === "function" && lockHeldByOther()){
+     不得把"没在播"写进共享状态，否则会把正在播放的实例/下个页面的续播意图覆盖掉 */
+  if(!playing && typeof lockHeldByOther === "function" && lockHeldByOther()){
     var cur = null;
     try{
       var m = document.cookie.match(/(?:^|;\s*)EC_NBS=([^;]*)/);
@@ -92,10 +90,7 @@ function ensureCtx(){
   analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = .82;
   comp.connect(analyser);
   applyStyleRouting();
-  /* 采样后台加载、不阻塞开播：切页续播立即出声，个别未就绪的音符先跳过（playNote 有保护），
-     采样陆续就绪后自动补齐——把跨页间断从秒级压到百毫秒级 */
-  loadSamples();
-  return Promise.resolve();
+  return loadSamples();
 }
 /* 根据风格调整路由与混响量 */
 function applyStyleRouting(){
@@ -185,7 +180,7 @@ function loadTrack(idx, autoplay){
   emit();
   return fetch(BASE+item.file)
     .then(function(r){return r.json();})
-    .then(function(j){ song=j; save(); if(autoplay||_pendingPlay){ _pendingPlay=false; doPlay(); } emit(); });
+    .then(function(j){ song=j; save(); if(autoplay) doPlay(); emit(); });
 }
 /* 跨页面/重复实例防护：同源多页或 bfcache 重载时，避免两个引擎同时出声 */
 var _bc = null, _myId = Math.random().toString(36).slice(2) + Date.now();
@@ -225,16 +220,7 @@ function lockHeldByOther(){
   return !!(l && l.id !== _myId && Date.now() - l.ts < 5000);
 }
 setInterval(function(){
-  /* 全站暂停同步：我在播，但共享状态被别的页面在我开始播放之后写成了"暂停"
-     → 用户明确关了音乐，本实例也停（pause 是全站意图，不是单页面的） */
-  if(playing){
-    var st0 = load();
-    if(st0 && !st0.play && st0.ts > _playStartedAt){
-      playing=false; clearInterval(schedTimer); stopSrcs(); save(); emit();
-      return;
-    }
-    writeLock();
-  }
+  if(playing){ writeLock(); }
   var l = lockHolder();
   /* 别的实例握着新锁：我安静退出（不写共享状态，共享进度由对方维护） */
   if(l && l.id !== _myId && Date.now() - l.ts < 5000 && playing && l.ts > _playStartedAt){
@@ -251,10 +237,8 @@ setInterval(function(){
   }
 }, 1500);
 
-var _pendingPlay=false;   // 谱面未就绪时的待播意图（采样后台加载后 doPlay 可能早于 loadTrack 完成）
 function doPlay(){
-  if(!song){ _pendingPlay=true; ensureCtx(); return; }   // 先在手势上下文里建好/唤醒 ctx，谱面就绪后自动开播
-  if(playing) return;
+  if(!song||playing) return;
   ensureCtx().then(function(){
     if(ctx.state==="suspended") ctx.resume();
     if(offsetTick>=song.length){ offsetTick=0; notePtr=0; }
@@ -267,9 +251,7 @@ function doPlay(){
 function doPause(){
   if(!playing) return;
   offsetTick=curTick(); playing=false;
-  clearInterval(schedTimer); stopSrcs();
-  _forceWrite=true; save(); _forceWrite=false;   // 主动暂停 = 全站意图，强制写入共享状态
-  emit();
+  clearInterval(schedTimer); stopSrcs(); save(); emit();
 }
 function onEnd(){
   var nx = loopMode===1 ? curIdx : (loopMode===2 ? Math.floor(Math.random()*playlist.length) : curIdx+1);
@@ -355,13 +337,9 @@ document.addEventListener("visibilitychange",function(){
   }
 });
 /* bfcache 恢复：页面被浏览器整个冻结后带回来，引擎其实还活着；
-   先读共享状态——若在别的页面已把音乐关了（全站暂停），本实例也停，不再自响 */
+   此时同步一次 UI，但不要再次触发续播（否则与原实例叠加） */
 window.addEventListener("pageshow",function(e){
-  if(e.persisted){
-    var st = load();
-    if(playing && st && !st.play){ doPause(); return; }
-    if(playing){ emit(); }
-  }
+  if(e.persisted && playing){ emit(); }
 });
 
 /* ---------- 对外 API ---------- */
@@ -374,17 +352,6 @@ var api = {
   seek:function(pct){ if(!song)return; var t=Math.max(0,Math.min(song.length,pct*song.length)); var w=playing; if(playing)doPause(); offsetTick=t; notePtr=findPtr(t); if(w)doPlay(); save(); emit(); },
   setVol:function(v){ vol=Math.max(0,Math.min(1,v)); muted=false; if(master)master.gain.value=(styleMode==="raw"?vol:vol*BOOST); save(); },
   isPlaying:function(){ return playing; },
-  /* 全站视角的"正在播"：本页在播，或共享状态在播且锁在别的页面手里（那个页面正在出声） */
-  isPlayingAnywhere:function(){
-    if(playing) return true;
-    var st=load();
-    return !!(st && st.play && lockHeldByOther());
-  },
-  /* 全站暂停：本页在播则本页停；别页在播则写入暂停意图，那个页面心跳 1.5s 内同步停 */
-  pauseEverywhere:function(){
-    if(playing){ doPause(); }
-    else { _forceWrite=true; save(); _forceWrite=false; }
-  },
   title:function(){ return playlist[curIdx]?playlist[curIdx].title:""; },
   progress:function(){ return song?Math.min(1,curTick()/song.length):0; },
   cur:function(){ return song?curTick()/song.tempo:0; },
@@ -393,8 +360,6 @@ var api = {
   select:function(i){ doPause(); loadTrack(i,true); },
   onChange:function(f){ if(typeof f==="function") listeners.push(f); },
   resumeIfPlayed: resumeIfPlayed,
-  /* 开屏手势用：首次访问（无状态）或上次在播 → 开播；用户在任何页面明确关过 → 不自动播 */
-  playUnlessPaused:function(){ var st=load(); if(!st || st.play){ api.play(); } },
   setStyle:function(m){ if(m!=="hifi"&&m!=="raw")return; styleMode=m; applyStyleRouting(); save(); emit(); },
   getStyle:function(){ return styleMode; },
   getAnalyser:function(){ return analyser; },
