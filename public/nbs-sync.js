@@ -185,7 +185,14 @@ function loadTrack(idx, autoplay){
   emit();
   return fetch(BASE+item.file)
     .then(function(r){return r.json();})
-    .then(function(j){ song=j; save(); if(autoplay||_pendingPlay){ _pendingPlay=false; doPlay(); } emit(); });
+    .then(function(j){
+      song=j;
+      /* 此处不得无条件 save()：启动加载时 playing=false，会把"未在播"写进共享状态，
+         制造出一个假的"用户已暂停"指纹，导致开屏/续播时 playUnlessPaused() 静默拒播。
+         真正需要持久化的路径各自负责：doPlay() 开播后 save()，用户主动操作各自 save() */
+      if(autoplay||_pendingPlay){ _pendingPlay=false; doPlay(); }
+      emit();
+    });
 }
 /* 跨页面/重复实例防护：同源多页或 bfcache 重载时，避免两个引擎同时出声 */
 var _bc = null, _myId = Math.random().toString(36).slice(2) + Date.now();
