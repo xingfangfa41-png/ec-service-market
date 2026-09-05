@@ -90,7 +90,10 @@ function ensureCtx(){
   analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = .82;
   comp.connect(analyser);
   applyStyleRouting();
-  return loadSamples();
+  /* 采样后台加载、不阻塞开播：切页续播立即出声，个别未就绪的音符先跳过（playNote 有保护），
+     采样陆续就绪后自动补齐——把跨页间断从秒级压到百毫秒级 */
+  loadSamples();
+  return Promise.resolve();
 }
 /* 根据风格调整路由与混响量 */
 function applyStyleRouting(){
@@ -220,7 +223,16 @@ function lockHeldByOther(){
   return !!(l && l.id !== _myId && Date.now() - l.ts < 5000);
 }
 setInterval(function(){
-  if(playing){ writeLock(); }
+  /* 全站暂停同步：我在播，但共享状态被别的页面在我开始播放之后写成了"暂停"
+     → 用户明确关了音乐，本实例也停（pause 是全站意图，不是单页面的） */
+  if(playing){
+    var st0 = load();
+    if(st0 && !st0.play && st0.ts > _playStartedAt){
+      playing=false; clearInterval(schedTimer); stopSrcs(); save(); emit();
+      return;
+    }
+    writeLock();
+  }
   var l = lockHolder();
   /* 别的实例握着新锁：我安静退出（不写共享状态，共享进度由对方维护） */
   if(l && l.id !== _myId && Date.now() - l.ts < 5000 && playing && l.ts > _playStartedAt){
@@ -337,9 +349,13 @@ document.addEventListener("visibilitychange",function(){
   }
 });
 /* bfcache 恢复：页面被浏览器整个冻结后带回来，引擎其实还活着；
-   此时同步一次 UI，但不要再次触发续播（否则与原实例叠加） */
+   先读共享状态——若在别的页面已把音乐关了（全站暂停），本实例也停，不再自响 */
 window.addEventListener("pageshow",function(e){
-  if(e.persisted && playing){ emit(); }
+  if(e.persisted){
+    var st = load();
+    if(playing && st && !st.play){ doPause(); return; }
+    if(playing){ emit(); }
+  }
 });
 
 /* ---------- 对外 API ---------- */
