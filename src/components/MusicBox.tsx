@@ -142,7 +142,7 @@ export default function MusicBox() {
   /* 引擎状态 → React state */
   const sync = () => {
     const e = N(); if (!e) return;
-    setPlaying(!!e.isPlaying());
+    setPlaying(!!(e.isPlayingAnywhere ? e.isPlayingAnywhere() : e.isPlaying()));
     setTitle(e.title() || "");
     setDur(e.dur());
     setList(e.playlist());
@@ -285,7 +285,12 @@ export default function MusicBox() {
               <button className="np-btn mid" title="上一首" onClick={() => { N()?.prev(); setTimeout(sync, 80); }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L8.5 12z"/></svg>
               </button>
-              <button className="np-btn big" title="播放/暂停" onClick={() => N()?.toggle()}>
+              <button className="np-btn big" title="播放/暂停" onClick={() => {
+                const e = N(); if (!e) return;
+                const on = e.isPlayingAnywhere ? e.isPlayingAnywhere() : e.isPlaying();
+                if (on && e.pauseEverywhere) e.pauseEverywhere(); else e.play();
+                setTimeout(sync, 80);
+              }}>
                 {playing
                   ? <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
                   : <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>}

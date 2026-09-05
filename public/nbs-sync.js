@@ -185,7 +185,7 @@ function loadTrack(idx, autoplay){
   emit();
   return fetch(BASE+item.file)
     .then(function(r){return r.json();})
-    .then(function(j){ song=j; save(); if(autoplay) doPlay(); emit(); });
+    .then(function(j){ song=j; save(); if(autoplay||_pendingPlay){ _pendingPlay=false; doPlay(); } emit(); });
 }
 /* 跨页面/重复实例防护：同源多页或 bfcache 重载时，避免两个引擎同时出声 */
 var _bc = null, _myId = Math.random().toString(36).slice(2) + Date.now();
@@ -251,8 +251,10 @@ setInterval(function(){
   }
 }, 1500);
 
+var _pendingPlay=false;   // 谱面未就绪时的待播意图（采样后台加载后 doPlay 可能早于 loadTrack 完成）
 function doPlay(){
-  if(!song||playing) return;
+  if(!song){ _pendingPlay=true; ensureCtx(); return; }   // 先在手势上下文里建好/唤醒 ctx，谱面就绪后自动开播
+  if(playing) return;
   ensureCtx().then(function(){
     if(ctx.state==="suspended") ctx.resume();
     if(offsetTick>=song.length){ offsetTick=0; notePtr=0; }
@@ -372,6 +374,17 @@ var api = {
   seek:function(pct){ if(!song)return; var t=Math.max(0,Math.min(song.length,pct*song.length)); var w=playing; if(playing)doPause(); offsetTick=t; notePtr=findPtr(t); if(w)doPlay(); save(); emit(); },
   setVol:function(v){ vol=Math.max(0,Math.min(1,v)); muted=false; if(master)master.gain.value=(styleMode==="raw"?vol:vol*BOOST); save(); },
   isPlaying:function(){ return playing; },
+  /* 全站视角的"正在播"：本页在播，或共享状态在播且锁在别的页面手里（那个页面正在出声） */
+  isPlayingAnywhere:function(){
+    if(playing) return true;
+    var st=load();
+    return !!(st && st.play && lockHeldByOther());
+  },
+  /* 全站暂停：本页在播则本页停；别页在播则写入暂停意图，那个页面心跳 1.5s 内同步停 */
+  pauseEverywhere:function(){
+    if(playing){ doPause(); }
+    else { _forceWrite=true; save(); _forceWrite=false; }
+  },
   title:function(){ return playlist[curIdx]?playlist[curIdx].title:""; },
   progress:function(){ return song?Math.min(1,curTick()/song.length):0; },
   cur:function(){ return song?curTick()/song.tempo:0; },
