@@ -40,11 +40,13 @@ try{
   var _h = location.hostname;
   if(/(^|\.)ec-crystal-war\.com$/.test(_h)) COOKIE_DOM = ";domain=.ec-crystal-war.com";
 }catch(e){}
+var _forceWrite = false;   // 主动暂停/操作时强制写共享状态（不被锁防覆盖挡住）
 function save(){
   var playIntent = playing;
   /* 自己没在播但别的实例握着播放锁（页面藏后台/跳走时的存档）：
-     不得把"没在播"写进共享状态，否则会把正在播放的实例/下个页面的续播意图覆盖掉 */
-  if(!playing && typeof lockHeldByOther === "function" && lockHeldByOther()){
+     不得把"没在播"写进共享状态，否则会把正在播放的实例/下个页面的续播意图覆盖掉。
+     例外：_forceWrite（用户主动点了暂停/操作）——主动意图必须生效 */
+  if(!playing && !_forceWrite && typeof lockHeldByOther === "function" && lockHeldByOther()){
     var cur = null;
     try{
       var m = document.cookie.match(/(?:^|;\s*)EC_NBS=([^;]*)/);
@@ -263,7 +265,9 @@ function doPlay(){
 function doPause(){
   if(!playing) return;
   offsetTick=curTick(); playing=false;
-  clearInterval(schedTimer); stopSrcs(); save(); emit();
+  clearInterval(schedTimer); stopSrcs();
+  _forceWrite=true; save(); _forceWrite=false;   // 主动暂停 = 全站意图，强制写入共享状态
+  emit();
 }
 function onEnd(){
   var nx = loopMode===1 ? curIdx : (loopMode===2 ? Math.floor(Math.random()*playlist.length) : curIdx+1);
@@ -376,6 +380,8 @@ var api = {
   select:function(i){ doPause(); loadTrack(i,true); },
   onChange:function(f){ if(typeof f==="function") listeners.push(f); },
   resumeIfPlayed: resumeIfPlayed,
+  /* 开屏手势用：首次访问（无状态）或上次在播 → 开播；用户在任何页面明确关过 → 不自动播 */
+  playUnlessPaused:function(){ var st=load(); if(!st || st.play){ api.play(); } },
   setStyle:function(m){ if(m!=="hifi"&&m!=="raw")return; styleMode=m; applyStyleRouting(); save(); emit(); },
   getStyle:function(){ return styleMode; },
   getAnalyser:function(){ return analyser; },
