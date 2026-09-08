@@ -87,6 +87,45 @@ export default function Home() {
     { enabled: true }
   );
 
+  // QQ 快捷登录 SDK：加载 qc_jssdk 渲染 QQ 头像按钮，授权完成后自动换取会话
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const cfg = await fetch("/api/auth/qq/config").then((r) => r.json());
+        const appId = cfg && cfg.appId;
+        if (!appId) return;
+        const w = window as any;
+        if (w.QC && w.QC.Login) return;
+        const s = document.createElement("script");
+        s.src = "https://qzonestyle.gtimg.cn/qzone/qzact/common/share/js/qc_loader.js";
+        s.setAttribute("data-app_id", appId);
+        s.setAttribute("data-redirect_uri", window.location.origin + "/");
+        s.async = true;
+        s.onload = () => {
+          if (cancelled || !(window as any).QC) return;
+          (window as any).QC.Login({ btnId: "qqQuickLogin", size: "A_M" });
+          (window as any).QC.Login.getMe(async (openId: string, accessToken: string) => {
+            if (!openId || !accessToken) return;
+            try {
+              const res = await fetch(
+                `/api/auth/qq/sdk?openid=${encodeURIComponent(openId)}&access_token=${encodeURIComponent(accessToken)}`
+              ).then((r) => r.json());
+              if (res && res.token && res.user) {
+                localStorage.setItem("ec_user", JSON.stringify(res.user));
+                setCurrentUserState(res.user);
+              } else if (res && res.error) {
+                setLoginError(res.error.message || "QQ登录失败");
+              }
+            } catch (e) { /* ignore */ }
+          });
+        };
+        document.head.appendChild(s);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const error = rpcError ? "加载失败: " + rpcError.message : "";
 
   return (
@@ -119,14 +158,17 @@ export default function Home() {
                 <span className="text-sm text-zinc-300 max-w-[80px] truncate hidden sm:block">{currentUser.username}</span>
               </div>
             ) : (
-              <Button
-                onClick={() => startQQLogin("/")}
-                variant="ghost"
-                className="text-zinc-400 hover:text-white hover:bg-white/5 h-9 gap-2"
-              >
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">QQ登录</span>
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <div id="qqQuickLogin" className="flex items-center" />
+                <Button
+                  onClick={() => startQQLogin("/")}
+                  variant="ghost"
+                  className="text-zinc-400 hover:text-white hover:bg-white/5 h-9 gap-2 px-2"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">QQ登录</span>
+                </Button>
+              </div>
             )}
             <Button
               onClick={() => {

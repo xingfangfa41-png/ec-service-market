@@ -216,6 +216,52 @@ async function ensureUserTable() {
   try { await executeSql("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_qq_openid ON users(qq_openid)"); } catch (e) { /* ignore */ }
 }
 
+// Upsert a user by QQ openid; returns the username (shared by OAuth callback & SDK login)
+async function upsertQQUser(openid, unionid, nickname, avatar) {
+  const found = await executeSql("SELECT id, username FROM users WHERE qq_openid = ? LIMIT 1", [openid]);
+  let username;
+  if (found[0]?.rows?.length) {
+    username = String(extract(found[0].rows[0], 1) || "");
+    if (avatar) {
+      await executeSql("UPDATE users SET avatar = ? WHERE qq_openid = ?", [avatar, openid]);
+    }
+  } else {
+    username = sanitizeUsername(nickname) || "QQ用户" + Math.floor(Math.random() * 90000 + 10000);
+    const nameTaken = await executeSql("SELECT id FROM users WHERE username = ? LIMIT 1", [username]);
+    if (nameTaken[0]?.rows?.length) {
+      username = username.slice(0, 12) + Math.floor(Math.random() * 9000 + 1000);
+    }
+    await executeSql(
+      "INSERT INTO users (username, avatar, qq_openid, qq_unionid) VALUES (?, ?, ?, ?)",
+      [username, avatar, openid, unionid]
+    );
+  }
+  return username;
+}
+
+// Fetch QQ nickname & avatar by access_token + openid (best-effort)
+async function fetchQQUserInfo(appId, accessToken, openid) {
+  let nickname = "";
+  let avatar = null;
+  try {
+    const info = await (
+      await fetch(
+        "https://graph.qq.com/user/get_user_info" +
+          "?access_token=" + encodeURIComponent(accessToken) +
+          "&oauth_consumer_key=" + encodeURIComponent(appId) +
+          "&openid=" + encodeURIComponent(openid) +
+          "&fmt=json"
+      )
+    ).json();
+    if (info.ret === 0) {
+      nickname = String(info.nickname || "").trim();
+      avatar = info.figureurl_qq_2 || info.figureurl_qq_1 || null;
+      if (avatar) avatar = String(avatar).replace(/^http:\/\//, "https://");
+    }
+  } catch (e) { /* non-fatal */ }
+  return { nickname, avatar };
+}
+
 // ===== IP-BASED RATE LIMITING =====
 
 // Simple in-memory IP tracking (resets on cold start, but good enough)
@@ -473,45 +519,11 @@ export default async function handler(request) {
       const unionid = meData.unionid || null;
 
       // 3. Get QQ nickname & avatar (best-effort, failures are non-fatal)
-      let nickname = "";
-      let avatar = null;
-      try {
-        const info = await (
-          await fetch(
-            "https://graph.qq.com/user/get_user_info" +
-              "?access_token=" + encodeURIComponent(accessToken) +
-              "&oauth_consumer_key=" + encodeURIComponent(appId) +
-              "&openid=" + encodeURIComponent(openid) +
-              "&fmt=json"
-          )
-        ).json();
-        if (info.ret === 0) {
-          nickname = String(info.nickname || "").trim();
-          avatar = info.figureurl_qq_2 || info.figureurl_qq_1 || null;
-          if (avatar) avatar = String(avatar).replace(/^http:\/\//, "https://");
-        }
-      } catch (e) { /* non-fatal */ }
+      const { nickname, avatar } = await fetchQQUserInfo(appId, accessToken, openid);
 
       // 4. Upsert user by qq_openid
       await ensureUserTable();
-      const found = await executeSql("SELECT id, username FROM users WHERE qq_openid = ? LIMIT 1", [openid]);
-      let username;
-      if (found[0]?.rows?.length) {
-        username = String(extract(found[0].rows[0], 1) || "");
-        if (avatar) {
-          await executeSql("UPDATE users SET avatar = ? WHERE qq_openid = ?", [avatar, openid]);
-        }
-      } else {
-        username = sanitizeUsername(nickname) || "QQ用户" + Math.floor(Math.random() * 90000 + 10000);
-        const nameTaken = await executeSql("SELECT id FROM users WHERE username = ? LIMIT 1", [username]);
-        if (nameTaken[0]?.rows?.length) {
-          username = username.slice(0, 12) + Math.floor(Math.random() * 9000 + 1000);
-        }
-        await executeSql(
-          "INSERT INTO users (username, avatar, qq_openid, qq_unionid) VALUES (?, ?, ?, ?)",
-          [username, avatar, openid, unionid]
-        );
-      }
+      const username = await upsertQQUser(openid, unionid, nickname, avatar);
 
       // 5. Issue session token and redirect back to the app
       const token = await makeSessionToken(openid);
@@ -520,6 +532,47 @@ export default async function handler(request) {
         status: 302,
         headers: { Location: `${site}/?qq_token=${encodeURIComponent(token)}&from=${encodeURIComponent(from)}` },
       });
+    }
+
+    // === auth.qq.sdk (GET) - QQ 快捷登录 SDK：前端已拿到 openid+access_token，后端验证后签发会话 ===
+    if (path === "auth.qq.sdk") {
+      const appId = process.env.QQ_APP_ID;
+      const appKey = process.env.QQ_APP_KEY;
+      if (!appId || !appKey) {
+        return json({ error: { message: "QQ登录未配置（缺少 QQ_APP_ID / QQ_APP_KEY）" } }, 500);
+      }
+      const openid = url.searchParams.get("openid");
+      const accessToken = url.searchParams.get("access_token");
+      if (!openid || !accessToken) {
+        return json({ error: { message: "缺少 openid 或 access_token 参数" } }, 400);
+      }
+      // 1. 用 access_token 调 QQ 接口验证 openid 一致（防止伪造 openid）
+      const meText = await (
+        await fetch("https://graph.qq.com/oauth2.0/me?access_token=" + encodeURIComponent(accessToken) + "&fmt=json")
+      ).text();
+      const meData = parseJsonp(meText);
+      if (!meData.openid || meData.openid !== openid) {
+        return json({ error: { message: "QQ身份校验失败，请重新登录" } }, 401);
+      }
+      const unionid = meData.unionid || null;
+      // 2. 获取昵称与头像（失败不致命）
+      const { nickname, avatar } = await fetchQQUserInfo(appId, accessToken, openid);
+      // 3. Upsert user and issue session token
+      await ensureUserTable();
+      await upsertQQUser(openid, unionid, nickname, avatar);
+      const token = await makeSessionToken(openid);
+      const uRow = await executeSql("SELECT id, username, avatar FROM users WHERE qq_openid = ? LIMIT 1", [openid]);
+      const u = uRow[0]?.rows?.[0];
+      const user = u
+        ? { id: Number(extract(u, 0)), username: String(extract(u, 1) || ""), avatar: extract(u, 2) || null }
+        : { id: 0, username: sanitizeUsername(nickname) || "QQ用户", avatar };
+      return json({ token, user });
+    }
+
+    // === auth.qq.config (GET) - 前端快捷登录 SDK 初始化需要的公开配置 ===
+    if (path === "auth.qq.config") {
+      const appId = process.env.QQ_APP_ID || null;
+      return json({ appId });
     }
 
     // === listing.list ===
