@@ -62,11 +62,27 @@ export function clearCurrentUser() {
   localStorage.removeItem("ec_user");
 }
 
-// Full logout: clear user, device fingerprint and verification state
+// Logout: clear logged-in user but KEEP the device fingerprint (ec_token),
+// so the same browser can sign back into the registered account later.
 export function logout() {
   localStorage.removeItem("ec_user");
-  localStorage.removeItem("ec_token");
-  localStorage.removeItem("ec_verify");
+}
+
+// Sign back in with the device fingerprint (restores the anonymous account registered on this device)
+export async function fetchUserByFingerprint(): Promise<User | null> {
+  const fp = getFingerprint();
+  if (!fp) return null;
+  try {
+    const res = await fetch(`/api/trpc/user.getMe?fingerprint=${encodeURIComponent(fp)}`);
+    const data = await res.json();
+    const u = data?.result?.data;
+    if (!u) return null;
+    const user: User = { id: Number(u.id) || 0, username: String(u.username || ""), avatar: u.avatar || null };
+    setCurrentUser(user);
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 // Available avatars

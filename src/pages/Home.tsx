@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
 import SiteNavPanel from "@/components/SiteNavPanel";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser, getAvatarSrc, fetchUserByQQToken, logout } from "@/lib/user";
+import { getCurrentUser, getAvatarSrc, fetchUserByQQToken, fetchUserByFingerprint, getFingerprint, logout } from "@/lib/user";
 import {
   Plus,
   MessageCircle,
@@ -201,6 +201,23 @@ export default function Home() {
                     <User className="h-4 w-4 text-emerald-400" />
                     QQ 登录
                   </button>
+                  {getFingerprint() && (
+                    <button
+                      onClick={async () => {
+                        const user = await fetchUserByFingerprint();
+                        if (user) {
+                          setLoginOpen(false);
+                          setCurrentUserState(user);
+                        } else {
+                          setLoginError("本机未找到已注册的账号");
+                        }
+                      }}
+                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                    >
+                      <User className="h-4 w-4 text-sky-400" />
+                      找回账号
+                    </button>
+                  )}
                   <button
                     onClick={() => { setLoginOpen(false); navigate("/register"); }}
                     className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
@@ -208,6 +225,9 @@ export default function Home() {
                     <User className="h-4 w-4 text-zinc-400" />
                     匿名注册
                   </button>
+                  {loginError && (
+                    <div className="px-3 py-1.5 text-xs text-red-400">{loginError}</div>
+                  )}
                 </div>
               </div>
             )}
