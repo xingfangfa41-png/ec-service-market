@@ -98,13 +98,13 @@ export default function Home() {
         const w = window as any;
         if (w.QC && w.QC.Login) return;
         const s = document.createElement("script");
-        s.src = "https://qzonestyle.gtimg.cn/qzone/qzact/common/share/js/qc_loader.js";
+        s.src = "https://connect.qq.com/qc_jssdk.js";
         s.setAttribute("data-app_id", appId);
         s.setAttribute("data-redirect_uri", window.location.origin + "/");
         s.async = true;
         s.onload = () => {
           if (cancelled || !(window as any).QC) return;
-          (window as any).QC.Login({ btnId: "qqQuickLogin", size: "A_M" });
+          (window as any).QC.Login({ btnId: "qqQuickLogin", size: "A_M", clientId: appId });
           (window as any).QC.Login.getMe(async (openId: string, accessToken: string) => {
             if (!openId || !accessToken) return;
             try {
