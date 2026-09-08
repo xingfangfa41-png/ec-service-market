@@ -44,14 +44,12 @@ const categories = [
   { key: "陪聊", label: "陪聊", icon: MessageCircle },
   { key: "找搭子", label: "找搭子", icon: Users },
   { key: "公会宣传", label: "公会宣传", icon: Shield },
-  { key: "卖号", label: "卖号", icon: Gamepad2 },
 ];
 
 const categoryClassMap: Record<string, string> = {
   "陪聊": "category-badge-chat",
   "找搭子": "category-badge-partner",
   "公会宣传": "category-badge-guild",
-  "卖号": "category-badge-account",
 };
 
 function getCategoryBadgeClass(category: string) {
@@ -102,7 +100,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">游戏服务广场</h1>
-              <p className="text-[11px] text-zinc-500 leading-none">陪聊 · 找搭子 · 公会宣传 · 卖号</p>
+              <p className="text-[11px] text-zinc-500 leading-none">陪聊 · 找搭子 · 公会宣传</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -182,7 +180,6 @@ export default function Home() {
             { label: "陪聊", count: listings.filter(l => l.category === "陪聊").length, icon: MessageCircle, color: "text-pink-400", bg: "bg-pink-500/8" },
             { label: "找搭子", count: listings.filter(l => l.category === "找搭子").length, icon: Users, color: "text-sky-400", bg: "bg-sky-500/8" },
             { label: "公会宣传", count: listings.filter(l => l.category === "公会宣传").length, icon: Shield, color: "text-amber-400", bg: "bg-amber-500/8" },
-            { label: "卖号", count: listings.filter(l => l.category === "卖号").length, icon: Gamepad2, color: "text-violet-400", bg: "bg-violet-500/8" },
           ].map((stat) => (
             <div key={stat.label} className="glow-border rounded-xl bg-[#111118] p-4">
               <div className="flex items-center gap-2 mb-2">

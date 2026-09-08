@@ -41,21 +41,18 @@ const categoryIconMap: Record<string, ElementType> = {
   "陪聊": MessageCircle,
   "找搭子": Users,
   "公会宣传": Shield,
-  "卖号": Gamepad2,
 };
 
 const categoryClassMap: Record<string, string> = {
   "陪聊": "category-badge-chat",
   "找搭子": "category-badge-partner",
   "公会宣传": "category-badge-guild",
-  "卖号": "category-badge-account",
 };
 
 const categories = [
   { key: "陪聊", label: "陪聊" },
   { key: "找搭子", label: "找搭子" },
   { key: "公会宣传", label: "公会宣传" },
-  { key: "卖号", label: "卖号" },
 ];
 
 export default function ListingDetail() {

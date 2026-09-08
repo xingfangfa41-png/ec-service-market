@@ -17,7 +17,6 @@ import {
   MessageCircle,
   Users,
   Shield,
-  Gamepad2,
   Send,
   ImagePlus,
   X,
@@ -30,7 +29,6 @@ const categories = [
   { key: "陪聊", label: "陪聊", icon: MessageCircle, desc: "找人陪聊、语音、一起玩游戏" },
   { key: "找搭子", label: "找搭子", icon: Users, desc: "找队友、找CP、找固玩" },
   { key: "公会宣传", label: "公会宣传", icon: Shield, desc: "宣传你的公会或社群" },
-  { key: "卖号", label: "卖号", icon: Gamepad2, desc: "出售游戏账号" },
 ];
 
 /** Format seconds to mm:ss */
