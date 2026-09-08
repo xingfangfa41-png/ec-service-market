@@ -62,6 +62,13 @@ export function clearCurrentUser() {
   localStorage.removeItem("ec_user");
 }
 
+// Full logout: clear user, device fingerprint and verification state
+export function logout() {
+  localStorage.removeItem("ec_user");
+  localStorage.removeItem("ec_token");
+  localStorage.removeItem("ec_verify");
+}
+
 // Available avatars
 export const AVATARS = [
   { id: "dragon", name: "小火龙", path: "/avatars/dragon.png" },

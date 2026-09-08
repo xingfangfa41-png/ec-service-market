@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
 import SiteNavPanel from "@/components/SiteNavPanel";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser, getAvatarSrc, fetchUserByQQToken } from "@/lib/user";
+import { getCurrentUser, getAvatarSrc, fetchUserByQQToken, logout } from "@/lib/user";
 import {
   Plus,
   MessageCircle,
@@ -14,6 +14,7 @@ import {
   Eye,
   Clock,
   Server,
+  LogOut,
   Tag,
   ImageIcon,
   User,
@@ -63,6 +64,7 @@ export default function Home() {
   const [currentUser, setCurrentUserState] = useState(getCurrentUser);
   const [loginError, setLoginError] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // Handle QQ OAuth callback: exchange qq_token for the user, then go to `from`
   useEffect(() => {
@@ -148,16 +150,34 @@ export default function Home() {
             <SiteNavPanel />
             {/* User badge (display only, no logout) */}
             {currentUser ? (
-              <div className="flex h-9 items-center gap-2 rounded-lg bg-white/5 px-2 border border-white/5">
-                <div className="h-6 w-6 rounded-full overflow-hidden bg-emerald-500/10">
-                  <img
-                    src={getAvatarSrc(currentUser.avatar)}
-                    alt="avatar"
-                    className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  className="flex h-9 items-center gap-2 rounded-lg bg-white/5 px-2 border border-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <div className="h-6 w-6 rounded-full overflow-hidden bg-emerald-500/10">
+                    <img
+                      src={getAvatarSrc(currentUser.avatar)}
+                      alt="avatar"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+                  <span className="text-sm text-zinc-300 max-w-[80px] truncate hidden sm:block">{currentUser.username}</span>
+                </button>
+                <div className={`absolute right-0 top-11 z-50 w-44 rounded-xl border border-white/10 bg-[#16161d] shadow-2xl p-2 ${userMenuOpen ? "" : "hidden"}`}>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setUserMenuOpen(false);
+                      setCurrentUserState(null);
+                    }}
+                    className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-white/5"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    退出登录
+                  </button>
                 </div>
-                <span className="text-sm text-zinc-300 max-w-[80px] truncate hidden sm:block">{currentUser.username}</span>
               </div>
             ) : (
               <div className="relative flex items-center">
