@@ -90,11 +90,12 @@ export default function ListingDetail() {
 
   // Comments
   const [commentText, setCommentText] = useState("");
+  const [commentSort, setCommentSort] = useState<"asc" | "desc">("asc");
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionUsers, setMentionUsers] = useState<{ id: number; username: string; avatar: string | null }[]>([]);
   const [mentionOpen, setMentionOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { data: comments, isLoading: commentsLoading, refetch: refetchComments } = trpc.comment.list.useQuery({ listingId });
+  const { data: comments, isLoading: commentsLoading, refetch: refetchComments } = trpc.comment.list.useQuery({ listingId, sort: commentSort });
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setCommentText(val);
@@ -468,6 +469,22 @@ export default function ListingDetail() {
                     {comments && comments.length > 0 && (
                       <span className="text-sm text-zinc-500">({comments.length})</span>
                     )}
+                    <span className="ml-auto flex items-center gap-1">
+                      {(["asc", "desc"] as const).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setCommentSort(v)}
+                          className={
+                            "px-2.5 py-1 text-xs rounded-lg border transition-colors " +
+                            (commentSort === v
+                              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+                              : "text-zinc-500 border-white/10 hover:text-zinc-300 hover:border-white/25")
+                          }
+                        >
+                          {v === "asc" ? "正序" : "倒序"}
+                        </button>
+                      ))}
+                    </span>
                   </h3>
                 </div>
 

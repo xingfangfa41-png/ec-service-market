@@ -701,10 +701,12 @@ export default async function handler(request) {
     if (path === "comment.list") {
       const listingId = Number(url.searchParams.get("listingId"));
       if (!listingId) return json({ error: "Missing listingId" }, 400);
+      // sort: asc=正序(旧在前,默认) / desc=倒序(新在前)
+      const sort = url.searchParams.get("sort") === "desc" ? "DESC" : "ASC";
 
       const results = await executeSql(
         `SELECT id, listing_id, content, nickname, color, created_at FROM comments 
-         WHERE listing_id = ? ORDER BY created_at DESC LIMIT 50`,
+         WHERE listing_id = ? ORDER BY created_at ${sort}, id ${sort} LIMIT 50`,
         [listingId]
       );
       const rows = results[0]?.rows || [];

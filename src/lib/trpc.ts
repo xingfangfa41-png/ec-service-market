@@ -244,7 +244,7 @@ export const trpc = {
   }),
   comment: {
     list: {
-      useQuery: (input: { listingId: number }, opts?: any) => {
+      useQuery: (input: { listingId: number; sort?: "asc" | "desc" }, opts?: any) => {
         const [data, setData] = useState<any[] | null>(null);
         const [isLoading, setLoading] = useState(true);
 
@@ -252,7 +252,10 @@ export const trpc = {
           if (!input.listingId) { setLoading(false); return; }
           setLoading(true);
           try {
-            const res = await get("comment.list", { listingId: String(input.listingId) });
+            const res = await get("comment.list", {
+              listingId: String(input.listingId),
+              sort: input.sort || "asc",
+            });
             setData(res.result?.data || []);
           } catch { setData([]); }
           finally { setLoading(false); }
@@ -262,7 +265,7 @@ export const trpc = {
           if (opts?.enabled === false) { setLoading(false); return; }
           fetchData();
           // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [input.listingId, opts?.enabled]);
+        }, [input.listingId, input.sort, opts?.enabled]);
 
         return { data: data || [], isLoading, refetch: fetchData };
       },
