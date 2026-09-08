@@ -455,6 +455,21 @@ export default async function handler(request) {
       return json({ result: { data: { id: Number(extract(r, 0) || 0), username: String(extract(r, 1) || ""), avatar: extract(r, 2), createdAt: formatDate(extract(r, 3)) } } });
     }
 
+    // === user.list - usernames for comment @mentions ===
+    if (path === "user.list") {
+      const results = await executeSql("SELECT id, username, avatar FROM users ORDER BY id DESC LIMIT 100");
+      const rows = results[0]?.rows || [];
+      return json({
+        result: {
+          data: rows.map((r) => ({
+            id: Number(extract(r, 0) || 0),
+            username: String(extract(r, 1) || ""),
+            avatar: extract(r, 2),
+          })),
+        },
+      });
+    }
+
     // === auth.qq.start (GET) - Redirect to QQ authorization page ===
     if (path === "auth.qq.start") {
       const appId = process.env.QQ_APP_ID;

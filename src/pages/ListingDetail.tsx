@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ElementType } from "react";
 import { useParams, useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
@@ -55,6 +55,18 @@ const categories = [
   { key: "公会社区", label: "公会社区" },
 ];
 
+// Render comment text with @mentions highlighted
+function renderCommentContent(content: string) {
+  const parts = String(content || "").split(/(@[\u4e00-\u9fa5a-zA-Z0-9_]+)/g);
+  return parts.map((p, i) =>
+    /^@[\u4e00-\u9fa5a-zA-Z0-9_]+$/.test(p) ? (
+      <span key={i} className="text-emerald-400 font-medium">{p}</span>
+    ) : (
+      <span key={i}>{p}</span>
+    )
+  );
+}
+
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -78,7 +90,43 @@ export default function ListingDetail() {
 
   // Comments
   const [commentText, setCommentText] = useState("");
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionUsers, setMentionUsers] = useState<{ id: number; username: string; avatar: string | null }[]>([]);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { data: comments, isLoading: commentsLoading, refetch: refetchComments } = trpc.comment.list.useQuery({ listingId });
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setCommentText(val);
+    const pos = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, pos);
+    const m = before.match(/@([\u4e00-\u9fa5a-zA-Z0-9_]*)$/);
+    if (m) {
+      setMentionQuery(m[1]);
+      setMentionOpen(true);
+      if (mentionUsers.length === 0) {
+        fetch("/api/trpc/user.list")
+          .then((r) => r.json())
+          .then((d) => setMentionUsers(d?.result?.data || []))
+          .catch(() => {});
+      }
+    } else {
+      setMentionOpen(false);
+    }
+  };
+
+  const pickMention = (username: string) => {
+    const el = textareaRef.current;
+    const pos = el?.selectionStart ?? commentText.length;
+    const before = commentText.slice(0, pos);
+    const m = before.match(/@([\u4e00-\u9fa5a-zA-Z0-9_]*)$/);
+    if (!m) return;
+    const replace = commentText.slice(0, pos - m[0].length) + "@" + username + " " + commentText.slice(pos);
+    setCommentText(replace);
+    setMentionOpen(false);
+    requestAnimationFrame(() => el?.focus());
+  };
+
   const commentMutation = trpc.comment.create.useMutation({
     onSuccess: () => {
       setCommentText("");
@@ -457,7 +505,7 @@ export default function ListingDetail() {
                             </span>
                           </div>
                           <p className="text-sm text-zinc-400 leading-relaxed break-words">
-                            {comment.content}
+                            {renderCommentContent(comment.content)}
                           </p>
                         </div>
                       </div>
@@ -491,14 +539,43 @@ export default function ListingDetail() {
                         )}
                       </p>
                       <div className="flex gap-2">
-                        <Textarea
-                          value={commentText}
-                          onChange={(e) => setCommentText(e.target.value)}
-                          placeholder={currentUser ? "写下你的评论..." : "请先注册后再评论"}
-                          disabled={!currentUser}
-                          className="flex-1 min-h-[60px] bg-[#0d0d14] border-white/5 text-zinc-200 placeholder:text-zinc-700 focus:border-emerald-500/30 focus:ring-emerald-500/10 text-sm disabled:opacity-50"
-                          maxLength={500}
-                        />
+                        <div className="relative flex-1">
+                          {mentionOpen && currentUser && (
+                            <div className="absolute bottom-full left-0 right-0 mb-2 max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#16161d] shadow-2xl z-20">
+                              {mentionUsers
+                                .filter((u) => u.username.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+                                .slice(0, 8)
+                                .map((u) => (
+                                  <button
+                                    key={u.id}
+                                    onClick={() => pickMention(u.username)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                                  >
+                                    <div className="h-5 w-5 rounded-full overflow-hidden bg-emerald-500/10 flex items-center justify-center text-[10px] text-white flex-shrink-0">
+                                      {u.avatar ? (
+                                        <img src={getAvatarSrc(u.avatar)} className="w-full h-full object-cover" alt="" />
+                                      ) : (
+                                        (u.username || "?")[0]
+                                      )}
+                                    </div>
+                                    <span className="truncate">{u.username}</span>
+                                  </button>
+                                ))}
+                              {mentionUsers.filter((u) => u.username.toLowerCase().startsWith(mentionQuery.toLowerCase())).length === 0 && (
+                                <div className="px-3 py-2 text-xs text-zinc-500">没有匹配的用户</div>
+                              )}
+                            </div>
+                          )}
+                          <Textarea
+                            ref={textareaRef}
+                            value={commentText}
+                            onChange={handleCommentChange}
+                            placeholder={currentUser ? "写下你的评论...（输入 @ 可艾特用户）" : "请先注册后再评论"}
+                            disabled={!currentUser}
+                            className="min-h-[60px] w-full bg-[#0d0d14] border-white/5 text-zinc-200 placeholder:text-zinc-700 focus:border-emerald-500/30 focus:ring-emerald-500/10 text-sm disabled:opacity-50"
+                            maxLength={500}
+                          />
+                        </div>
                         <Button
                           onClick={() => {
                             if (!commentText.trim() || !currentUser) return;
