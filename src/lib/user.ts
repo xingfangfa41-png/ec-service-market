@@ -1,6 +1,6 @@
 // User management - stores registered user info
 
-const STORAGE_VERSION = "2"; // bump to invalidate old cached data
+const STORAGE_VERSION = "3"; // v3: 清除匿名身份缓存，仅保留QQ登录
 
 export interface User {
   id: number;
