@@ -57,6 +57,7 @@ function toListing(row) {
     contactValue: String(extract(row, 7) || ""),
     createdAt: formatDate(extract(row, 8)),
     image: extract(row, 9),
+    commentCount: Number(extract(row, 10) || 0),
   };
 }
 
@@ -581,12 +582,12 @@ export default async function handler(request) {
       let results;
       if (category && category !== "all") {
         results = await executeSql(
-          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100",
+          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100",
           [category]
         );
       } else {
         results = await executeSql(
-          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings ORDER BY created_at DESC LIMIT 100"
+          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count FROM listings ORDER BY created_at DESC LIMIT 100"
         );
       }
       const rows = results[0]?.rows || [];
@@ -598,7 +599,7 @@ export default async function handler(request) {
       const id = Number(url.searchParams.get("id"));
       if (!id) return json({ error: "Missing id" }, 400);
       const results = await executeSql(
-        "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image FROM listings WHERE id = ?",
+        "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count FROM listings WHERE id = ?",
         [id]
       );
       const rows = results[0]?.rows || [];

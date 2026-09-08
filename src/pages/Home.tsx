@@ -37,6 +37,7 @@ interface Listing {
   publisherId: string;
   image: string | null;
   createdAt: Date;
+  commentCount: number;
 }
 
 const categories = [
@@ -325,6 +326,10 @@ export default function Home() {
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageCircle className="h-3 w-3" />
+                    {listing.commentCount ?? 0}
                   </span>
                   <span className="flex items-center gap-1 text-emerald-500/70 ml-auto group-hover:text-emerald-400 transition-colors">
                     <Eye className="h-3 w-3" />
