@@ -201,23 +201,21 @@ export default function Home() {
                     <User className="h-4 w-4 text-emerald-400" />
                     QQ 登录
                   </button>
-                  {getFingerprint() && (
-                    <button
-                      onClick={async () => {
-                        const user = await fetchUserByFingerprint();
-                        if (user) {
-                          setLoginOpen(false);
-                          setCurrentUserState(user);
-                        } else {
-                          setLoginError("本机未找到已注册的账号");
-                        }
-                      }}
-                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
-                    >
-                      <User className="h-4 w-4 text-sky-400" />
-                      找回账号
-                    </button>
-                  )}
+                  <button
+                    onClick={async () => {
+                      const user = await fetchUserByFingerprint();
+                      if (user) {
+                        setLoginOpen(false);
+                        setCurrentUserState(user);
+                      } else {
+                        setLoginError(getFingerprint() ? "本机未找到已注册的账号" : "本机没有可找回的账号，请用匿名注册创建新身份");
+                      }
+                    }}
+                    className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                  >
+                    <User className="h-4 w-4 text-sky-400" />
+                    找回账号
+                  </button>
                   <button
                     onClick={() => { setLoginOpen(false); navigate("/register"); }}
                     className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
