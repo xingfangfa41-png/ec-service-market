@@ -382,36 +382,38 @@ export default function ListingDetail() {
                 )}
               </div>
 
+              {/* Publisher */}
+              <div className="flex items-center gap-2 mb-3 text-xs text-zinc-500">
+                {listing.publisherAvatar ? (
+                  <img
+                    src={/^https?:\/\//.test(String(listing.publisherAvatar)) ? listing.publisherAvatar : `/avatars/${listing.publisherAvatar}.png`}
+                    alt=""
+                    className="h-5 w-5 rounded-full object-cover shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <span className="h-5 w-5 rounded-full bg-emerald-500/15 text-emerald-300 text-[10px] flex items-center justify-center font-bold shrink-0">
+                    {(listing.publisherNickname || "匿")[0]}
+                  </span>
+                )}
+                <span className="font-medium text-zinc-300 truncate max-w-[180px]">{listing.publisherNickname || "匿名用户"}</span>
+                <span className="ml-auto shrink-0 flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
+                </span>
+              </div>
+
               {/* Title */}
               <h1 className="text-xl font-bold text-white mb-4">{listing.title}</h1>
 
               {/* Meta */}
-              <div className="flex items-center gap-3 text-xs text-zinc-500 mb-6 pb-4 border-b border-white/5 flex-wrap">
-                <span className="flex items-center gap-2 min-w-0">
-                  {listing.publisherAvatar ? (
-                    <img
-                      src={/^https?:\/\//.test(String(listing.publisherAvatar)) ? listing.publisherAvatar : `/avatars/${listing.publisherAvatar}.png`}
-                      alt=""
-                      className="h-5 w-5 rounded-full object-cover shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <span className="h-5 w-5 rounded-full bg-emerald-500/15 text-emerald-300 text-[10px] flex items-center justify-center font-bold shrink-0">
-                      {(listing.publisherNickname || "匿")[0]}
-                    </span>
-                  )}
-                  <span className="text-zinc-300 truncate max-w-[160px]">{listing.publisherNickname || "匿名用户"}</span>
-                </span>
+              <div className="flex items-center gap-4 text-xs text-zinc-500 mb-6 pb-4 border-b border-white/5">
                 {listing.serverName && (
                   <span className="flex items-center gap-1">
                     <Server className="h-3.5 w-3.5" />
                     {listing.serverName}
                   </span>
                 )}
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
-                </span>
               </div>
 
               {/* Description */}

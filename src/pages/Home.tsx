@@ -321,6 +321,25 @@ export default function Home() {
                 onClick={() => navigate(`/listing/${listing.id}`)}
                 className="glow-border w-full rounded-xl bg-[#111118] p-5 text-left transition-all duration-200 hover:bg-[#16161f] hover:scale-[1.005] cursor-pointer group"
               >
+                <div className="flex items-center gap-2 mb-2.5 text-xs text-zinc-500">
+                  {listing.publisherAvatar ? (
+                    <img
+                      src={/^https?:\/\//.test(String(listing.publisherAvatar)) ? listing.publisherAvatar : `/avatars/${listing.publisherAvatar}.png`}
+                      alt=""
+                      className="h-4.5 w-4.5 h-[18px] w-[18px] rounded-full object-cover shrink-0"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <span className="h-[18px] w-[18px] rounded-full bg-emerald-500/15 text-emerald-300 text-[9px] flex items-center justify-center font-bold shrink-0">
+                      {(listing.publisherNickname || "匿")[0]}
+                    </span>
+                  )}
+                  <span className="font-medium text-zinc-300 truncate max-w-[140px]">{listing.publisherNickname || "匿名用户"}</span>
+                  <span className="ml-auto shrink-0 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
+                  </span>
+                </div>
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className={`category-badge ${getCategoryBadgeClass(listing.category)}`}>
@@ -355,31 +374,12 @@ export default function Home() {
                   </div>
                 )}
                 <div className="flex items-center gap-3 text-xs text-zinc-600 flex-wrap">
-                  <span className="flex items-center gap-1.5 min-w-0">
-                    {listing.publisherAvatar ? (
-                      <img
-                        src={/^https?:\/\//.test(String(listing.publisherAvatar)) ? listing.publisherAvatar : `/avatars/${listing.publisherAvatar}.png`}
-                        alt=""
-                        className="h-4 w-4 rounded-full object-cover shrink-0"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    ) : (
-                      <span className="h-4 w-4 rounded-full bg-emerald-500/15 text-emerald-300 text-[9px] flex items-center justify-center font-bold shrink-0">
-                        {(listing.publisherNickname || "匿")[0]}
-                      </span>
-                    )}
-                    <span className="truncate max-w-[120px]">{listing.publisherNickname || "匿名用户"}</span>
-                  </span>
                   {listing.serverName && (
                     <span className="flex items-center gap-1">
                       <Server className="h-3 w-3" />
                       {listing.serverName}
                     </span>
                   )}
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {formatRelativeTime(listing.createdAt instanceof Date ? listing.createdAt.toISOString() : String(listing.createdAt))}
-                  </span>
                   <span className="flex items-center gap-1">
                     <MessageCircle className="h-3 w-3" />
                     {listing.commentCount ?? 0}
