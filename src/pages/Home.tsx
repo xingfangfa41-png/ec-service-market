@@ -161,6 +161,14 @@ export default function Home() {
               <div className="flex items-center gap-1.5">
                 <div id="qqQuickLogin" className="flex items-center" />
                 <Button
+                  onClick={() => navigate("/register")}
+                  variant="ghost"
+                  className="text-zinc-500 hover:text-white hover:bg-white/5 h-9 gap-1 px-2 text-xs"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">匿名</span>
+                </Button>
+                <Button
                   onClick={() => startQQLogin("/")}
                   variant="ghost"
                   className="text-zinc-400 hover:text-white hover:bg-white/5 h-9 gap-2 px-2"
