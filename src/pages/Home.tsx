@@ -61,6 +61,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [currentUser, setCurrentUserState] = useState(getCurrentUser);
   const [loginError, setLoginError] = useState("");
+  const [loginOpen, setLoginOpen] = useState(false);
 
   // Handle QQ OAuth callback: exchange qq_token for the user, then go to `from`
   useEffect(() => {
@@ -158,30 +159,41 @@ export default function Home() {
                 <span className="text-sm text-zinc-300 max-w-[80px] truncate hidden sm:block">{currentUser.username}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
-                <div id="qqQuickLogin" className="flex items-center" />
+              <div className="relative flex items-center">
                 <Button
-                  onClick={() => navigate("/register")}
-                  variant="ghost"
-                  className="text-zinc-500 hover:text-white hover:bg-white/5 h-9 gap-1 px-2 text-xs"
-                >
-                  <User className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">匿名</span>
-                </Button>
-                <Button
-                  onClick={() => startQQLogin("/")}
+                  onClick={() => setLoginOpen((o) => !o)}
                   variant="ghost"
                   className="text-zinc-400 hover:text-white hover:bg-white/5 h-9 gap-2 px-2"
                 >
                   <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">QQ登录</span>
+                  <span className="hidden sm:inline">登录</span>
                 </Button>
+                {/* 登录弹层：QQ快捷登录 + QQ登录 + 匿名注册（常驻DOM保证SDK可渲染） */}
+                <div className={`absolute right-0 top-11 z-50 w-52 rounded-xl border border-white/10 bg-[#16161d] shadow-2xl p-2 space-y-1 ${loginOpen ? "" : "hidden"}`}>
+                  <div className="flex items-center justify-center py-2 rounded-lg hover:bg-white/5">
+                    <div id="qqQuickLogin" className="flex items-center" />
+                  </div>
+                  <button
+                    onClick={() => { setLoginOpen(false); startQQLogin("/"); }}
+                    className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                  >
+                    <User className="h-4 w-4 text-emerald-400" />
+                    QQ 登录
+                  </button>
+                  <button
+                    onClick={() => { setLoginOpen(false); navigate("/register"); }}
+                    className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                  >
+                    <User className="h-4 w-4 text-zinc-400" />
+                    匿名注册
+                  </button>
+                </div>
               </div>
             )}
             <Button
               onClick={() => {
                 if (!currentUser) {
-                  startQQLogin("/create");
+                  setLoginOpen(true);
                   return;
                 }
                 navigate("/create");
