@@ -354,7 +354,22 @@ export default function Home() {
                     />
                   </div>
                 )}
-                <div className="flex items-center gap-4 text-xs text-zinc-600">
+                <div className="flex items-center gap-3 text-xs text-zinc-600 flex-wrap">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    {listing.publisherAvatar ? (
+                      <img
+                        src={/^https?:\/\//.test(String(listing.publisherAvatar)) ? listing.publisherAvatar : `/avatars/${listing.publisherAvatar}.png`}
+                        alt=""
+                        className="h-4 w-4 rounded-full object-cover shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span className="h-4 w-4 rounded-full bg-emerald-500/15 text-emerald-300 text-[9px] flex items-center justify-center font-bold shrink-0">
+                        {(listing.publisherNickname || "匿")[0]}
+                      </span>
+                    )}
+                    <span className="truncate max-w-[120px]">{listing.publisherNickname || "匿名用户"}</span>
+                  </span>
                   {listing.serverName && (
                     <span className="flex items-center gap-1">
                       <Server className="h-3 w-3" />

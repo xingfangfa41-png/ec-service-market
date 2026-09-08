@@ -186,6 +186,8 @@ export default function CreateListing() {
       contactType,
       contactValue: contactValue.trim(),
       image: image || undefined,
+      publisherNickname: currentUser?.username || undefined,
+      publisherAvatar: currentUser?.avatar || undefined,
     });
   };
 

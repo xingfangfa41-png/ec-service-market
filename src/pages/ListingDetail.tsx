@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { getAvatarSrc } from "@/lib/user";
+import { getAvatarSrc, getFingerprint } from "@/lib/user";
 import {
   Select,
   SelectContent,
@@ -386,7 +386,22 @@ export default function ListingDetail() {
               <h1 className="text-xl font-bold text-white mb-4">{listing.title}</h1>
 
               {/* Meta */}
-              <div className="flex items-center gap-4 text-xs text-zinc-500 mb-6 pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3 text-xs text-zinc-500 mb-6 pb-4 border-b border-white/5 flex-wrap">
+                <span className="flex items-center gap-2 min-w-0">
+                  {listing.publisherAvatar ? (
+                    <img
+                      src={/^https?:\/\//.test(String(listing.publisherAvatar)) ? listing.publisherAvatar : `/avatars/${listing.publisherAvatar}.png`}
+                      alt=""
+                      className="h-5 w-5 rounded-full object-cover shrink-0"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <span className="h-5 w-5 rounded-full bg-emerald-500/15 text-emerald-300 text-[10px] flex items-center justify-center font-bold shrink-0">
+                      {(listing.publisherNickname || "匿")[0]}
+                    </span>
+                  )}
+                  <span className="text-zinc-300 truncate max-w-[160px]">{listing.publisherNickname || "匿名用户"}</span>
+                </span>
                 {listing.serverName && (
                   <span className="flex items-center gap-1">
                     <Server className="h-3.5 w-3.5" />
@@ -510,6 +525,11 @@ export default function ListingDetail() {
                             <span className="text-sm font-medium text-zinc-300">
                               {comment.nickname || "匿名用户"}
                             </span>
+                            {comment.publisherId && listing.publisherId && comment.publisherId === listing.publisherId && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30">
+                                帖主
+                              </span>
+                            )}
                             <span className="text-xs text-zinc-600">
                               {formatRelativeTime(comment.createdAt)}
                             </span>
@@ -594,6 +614,7 @@ export default function ListingDetail() {
                               content: commentText.trim(),
                               nickname: currentUser.username,
                               color: currentUser.avatar,
+                              publisherId: getFingerprint() || undefined,
                             });
                           }}
                           disabled={commentMutation.isPending || !commentText.trim() || !currentUser}

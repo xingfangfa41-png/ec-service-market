@@ -58,7 +58,38 @@ function toListing(row) {
     createdAt: formatDate(extract(row, 8)),
     image: extract(row, 9),
     commentCount: Number(extract(row, 10) || 0),
+    publisherId: extract(row, 11),
+    publisherNickname: extract(row, 12),
+    publisherAvatar: extract(row, 13),
   };
+}
+
+// ===== LISTING EXTRAS (publisher display info + comment owner id) =====
+let listingExtrasEnsured = false;
+async function ensureListingExtras() {
+  if (listingExtrasEnsured) return;
+  listingExtrasEnsured = true;
+  // listings: 发帖人昵称/头像（用于帖子展示头像和名字）
+  try { await executeSql("ALTER TABLE listings ADD COLUMN publisher_nickname TEXT"); } catch (e) { /* exists */ }
+  try { await executeSql("ALTER TABLE listings ADD COLUMN publisher_avatar TEXT"); } catch (e) { /* exists */ }
+  // comments: 评论者身份（用于"帖主"标识）
+  try { await executeSql("ALTER TABLE comments ADD COLUMN publisher_id TEXT"); } catch (e) { /* exists */ }
+  // 回填历史帖子：按设备指纹匹配已注册用户
+  try {
+    await executeSql(
+      `UPDATE listings SET
+         publisher_nickname = COALESCE((SELECT username FROM users WHERE fingerprint = listings.publisher_id LIMIT 1), publisher_nickname),
+         publisher_avatar = COALESCE((SELECT avatar FROM users WHERE fingerprint = listings.publisher_id LIMIT 1), publisher_avatar)
+       WHERE publisher_nickname IS NULL`
+    );
+  } catch (e) { /* ignore */ }
+  // 回填历史评论：按昵称匹配已注册用户的指纹
+  try {
+    await executeSql(
+      `UPDATE comments SET publisher_id = (SELECT fingerprint FROM users WHERE username = comments.nickname LIMIT 1)
+       WHERE publisher_id IS NULL AND nickname IS NOT NULL`
+    );
+  } catch (e) { /* ignore */ }
 }
 
 // ===== TOKEN SIGNING (prevents forged publisherId) =====
@@ -593,16 +624,17 @@ export default async function handler(request) {
 
     // === listing.list ===
     if (path === "listing.list" || path === "") {
+      await ensureListingExtras();
       const category = url.searchParams.get("category") || undefined;
       let results;
       if (category && category !== "all") {
         results = await executeSql(
-          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100",
+          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count, publisher_id, publisher_nickname, publisher_avatar FROM listings WHERE category = ? ORDER BY created_at DESC LIMIT 100",
           [category]
         );
       } else {
         results = await executeSql(
-          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count FROM listings ORDER BY created_at DESC LIMIT 100"
+          "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count, publisher_id, publisher_nickname, publisher_avatar FROM listings ORDER BY created_at DESC LIMIT 100"
         );
       }
       const rows = results[0]?.rows || [];
@@ -611,10 +643,11 @@ export default async function handler(request) {
 
     // === listing.getById ===
     if (path === "listing.getById") {
+      await ensureListingExtras();
       const id = Number(url.searchParams.get("id"));
       if (!id) return json({ error: "Missing id" }, 400);
       const results = await executeSql(
-        "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count FROM listings WHERE id = ?",
+        "SELECT id, category, title, description, server_name, price, contact_type, contact_value, created_at, image, (SELECT COUNT(*) FROM comments WHERE listing_id = listings.id) AS comment_count, publisher_id, publisher_nickname, publisher_avatar FROM listings WHERE id = ?",
         [id]
       );
       const rows = results[0]?.rows || [];
@@ -687,11 +720,12 @@ export default async function handler(request) {
         color TEXT,
         created_at INTEGER DEFAULT (strftime('%s', 'now'))
       )`);
+      await ensureListingExtras();
 
       // 4. Insert comment
       await executeSql(
-        `INSERT INTO comments (listing_id, content, nickname, color) VALUES (?, ?, ?, ?)`,
-        [listingId, content.trim(), nickname || null, color || null]
+        `INSERT INTO comments (listing_id, content, nickname, color, publisher_id) VALUES (?, ?, ?, ?, ?)`,
+        [listingId, content.trim(), nickname || null, color || null, body.publisherId || null]
       );
 
       return json({ result: { data: { success: true } } });
@@ -704,8 +738,9 @@ export default async function handler(request) {
       // sort: asc=正序(旧在前,默认) / desc=倒序(新在前)
       const sort = url.searchParams.get("sort") === "desc" ? "DESC" : "ASC";
 
+      await ensureListingExtras();
       const results = await executeSql(
-        `SELECT id, listing_id, content, nickname, color, created_at FROM comments 
+        `SELECT id, listing_id, content, nickname, color, created_at, publisher_id FROM comments 
          WHERE listing_id = ? ORDER BY created_at ${sort}, id ${sort} LIMIT 50`,
         [listingId]
       );
@@ -717,6 +752,7 @@ export default async function handler(request) {
         nickname: extract(r, 3),
         avatar: extract(r, 4),
         createdAt: formatDate(extract(r, 5)),
+        publisherId: extract(r, 6),
       }));
       return json({ result: { data: comments } });
     }
@@ -756,14 +792,15 @@ export default async function handler(request) {
       }
 
       // 7. Ensure publisher exists
+      await ensureListingExtras();
       const pubCheck = await executeSql("SELECT id FROM publishers WHERE fingerprint = ? LIMIT 1", [publisherId]);
       if (!pubCheck[0]?.rows?.length) await executeSql("INSERT INTO publishers (fingerprint) VALUES (?)", [publisherId]);
 
       // 8. Insert listing
       const imageValue = body.image || null;
       await executeSql(
-        `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId, imageValue]
+        `INSERT INTO listings (category, title, description, server_name, price, contact_type, contact_value, publisher_id, image, publisher_nickname, publisher_avatar) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [category, title.trim(), description.trim(), serverName || null, price || null, contactType, contactValue.trim(), publisherId, imageValue, body.publisherNickname || null, body.publisherAvatar || null]
       );
 
       // 9. Update timestamp + record IP
