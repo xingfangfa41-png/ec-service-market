@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { AVATARS, setCurrentUser, getFingerprint } from "@/lib/user";
+import { ensureDeviceFingerprint } from "@/lib/trpc";
 import {
   UserPlus,
   Check,
@@ -185,7 +186,10 @@ export default function RegisterPage() {
       return;
     }
 
-    const fingerprint = getFingerprint();
+    let fingerprint = getFingerprint();
+    if (!fingerprint) {
+      fingerprint = await ensureDeviceFingerprint();
+    }
     if (!fingerprint) {
       setError("无法获取设备标识，请刷新页面");
       return;

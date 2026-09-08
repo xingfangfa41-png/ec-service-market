@@ -74,6 +74,16 @@ async function post(path: string, body: any) {
   return res.json();
 }
 
+// Ensure a device fingerprint exists (called before anonymous sign-up)
+export async function ensureDeviceFingerprint(): Promise<string | null> {
+  try {
+    const token = await ensureToken();
+    return token?.publisherId || null;
+  } catch {
+    return null;
+  }
+}
+
 export const trpc = {
   listing: {
     list: {
