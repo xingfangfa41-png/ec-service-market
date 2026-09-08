@@ -11,7 +11,7 @@ declare global {
 
 const CSS = `
 .ec-music-root{--gold:#FFD700;--line-soft:rgba(255,255,255,.10);--ink-2:#8a8478;--ink-3:#5a5448}
-.ec-fab{position:fixed;right:16px;bottom:18px;z-index:600;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,202,52,.4);
+.ec-fab{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom, 0px));z-index:600;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,202,52,.4);
   background:radial-gradient(circle at 35% 30%,#2a2416,#14100a 70%);color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;
   box-shadow:0 6px 20px rgba(0,0,0,.5);transition:transform .18s,box-shadow .25s}
 .ec-fab:hover{transform:scale(1.07)}
