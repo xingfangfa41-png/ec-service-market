@@ -6,6 +6,14 @@
       "destination": "/api?path=$1"
     },
     {
+      "source": "/api/auth/qq",
+      "destination": "/api?path=auth.qq.start"
+    },
+    {
+      "source": "/api/auth/qq/callback",
+      "destination": "/api?path=auth.qq.callback"
+    },
+    {
       "source": "/assets/(.*)",
       "destination": "/assets/$1"
     },

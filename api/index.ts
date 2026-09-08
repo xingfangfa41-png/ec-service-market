@@ -114,6 +114,108 @@ async function generatePublisherId() {
   return { id, signature };
 }
 
+// ===== QQ LOGIN (OAuth2.0 via QQ互联) =====
+
+// Site base URL (for QQ redirect_uri), configurable via SITE_URL
+function getSiteUrl(request) {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, "");
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "market.ec-crystal-war.com";
+  return `https://${host}`;
+}
+
+// HMAC hex signature of an arbitrary string
+async function hmacHex(data) {
+  const key = await getCryptoKey();
+  const sig = await crypto.subtle.sign("HMAC", key, strToBuf(data));
+  return bufToHex(sig);
+}
+
+// Stateless OAuth state: "ts:rand:encodedFrom:sig" (10 min validity, CSRF protection)
+async function makeOAuthState(from) {
+  const ts = Date.now();
+  const rand = crypto.randomUUID();
+  const safeFrom = from && from.startsWith("/") && !from.startsWith("//") ? from : "/";
+  const data = `${ts}:${rand}:${encodeURIComponent(safeFrom)}`;
+  const sig = await hmacHex(data);
+  return `${data}:${sig}`;
+}
+
+// Verify state; returns { ok, from } on success
+async function parseOAuthState(state) {
+  if (!state || typeof state !== "string") return { ok: false };
+  const parts = state.split(":");
+  if (parts.length !== 4) return { ok: false };
+  const [ts, rand, fromEnc, sig] = parts;
+  if (isNaN(Number(ts)) || Math.abs(Date.now() - Number(ts)) > 10 * 60 * 1000) return { ok: false };
+  const data = `${ts}:${rand}:${fromEnc}`;
+  const expect = await hmacHex(data);
+  if (expect !== sig) return { ok: false };
+  let from = "/";
+  try { from = decodeURIComponent(fromEnc); } catch { from = "/"; }
+  if (!from.startsWith("/") || from.startsWith("//")) from = "/";
+  return { ok: true, from };
+}
+
+// Session token: "openid:ts:sig" (valid 30 days)
+async function makeSessionToken(openid) {
+  const ts = Date.now();
+  const sig = await hmacHex(`${openid}:${ts}`);
+  return `${openid}:${ts}:${sig}`;
+}
+
+// Returns openid if token valid, else null
+async function verifySessionToken(token) {
+  if (!token || typeof token !== "string") return null;
+  const parts = token.split(":");
+  if (parts.length !== 3) return null;
+  const [openid, ts, sig] = parts;
+  if (!openid || isNaN(Number(ts))) return null;
+  if (Date.now() - Number(ts) > 30 * 24 * 3600 * 1000) return null;
+  const expect = await hmacHex(`${openid}:${ts}`);
+  if (expect !== sig) return null;
+  return openid;
+}
+
+// QQ API may return JSONP (callback({...});) or plain JSON
+function parseJsonp(text) {
+  const t = String(text || "").trim();
+  if (t.startsWith("callback(")) {
+    const end = t.lastIndexOf(")");
+    if (end > 10) {
+      try { return JSON.parse(t.slice(10, end)); } catch { return {}; }
+    }
+    return {};
+  }
+  try { return JSON.parse(t); } catch { return {}; }
+}
+
+// Keep QQ nickname compatible with the site's username rules
+function sanitizeUsername(name) {
+  const cleaned = String(name || "")
+    .replace(/[^\u4e00-\u9fa5a-zA-Z0-9_]/g, "")
+    .slice(0, 16);
+  return cleaned.length >= 2 ? cleaned : "";
+}
+
+// Ensure users table has QQ columns (idempotent, works on existing DBs)
+async function ensureUserTable() {
+  await executeSql(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    avatar TEXT,
+    fingerprint TEXT UNIQUE,
+    qq_openid TEXT,
+    qq_unionid TEXT,
+    created_at INTEGER DEFAULT (strftime('%s', 'now'))
+  )`);
+  try { await executeSql("ALTER TABLE users ADD COLUMN qq_openid TEXT"); } catch (e) { /* already exists */ }
+  try { await executeSql("ALTER TABLE users ADD COLUMN qq_unionid TEXT"); } catch (e) { /* already exists */ }
+  try { await executeSql("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_qq_openid ON users(qq_openid)"); } catch (e) { /* ignore */ }
+}
+
 // ===== IP-BASED RATE LIMITING =====
 
 // Simple in-memory IP tracking (resets on cold start, but good enough)
@@ -288,12 +390,136 @@ export default async function handler(request) {
 
     // === user.getMe ===
     if (path === "user.getMe") {
+      // QQ session token login
+      const qqToken = url.searchParams.get("qq_token");
+      if (qqToken) {
+        const openid = await verifySessionToken(qqToken);
+        if (!openid) return json({ result: { data: null } });
+        const qqResults = await executeSql("SELECT id, username, avatar, created_at FROM users WHERE qq_openid = ? LIMIT 1", [openid]);
+        if (!qqResults[0]?.rows?.length) return json({ result: { data: null } });
+        const qr = qqResults[0].rows[0];
+        return json({ result: { data: { id: Number(extract(qr, 0) || 0), username: String(extract(qr, 1) || ""), avatar: extract(qr, 2), createdAt: formatDate(extract(qr, 3)) } } });
+      }
       const fingerprint = url.searchParams.get("fingerprint");
       if (!fingerprint) return json({ result: { data: null } });
       const results = await executeSql("SELECT id, username, avatar, created_at FROM users WHERE fingerprint = ? LIMIT 1", [fingerprint]);
       if (!results[0]?.rows?.length) return json({ result: { data: null } });
       const r = results[0].rows[0];
       return json({ result: { data: { id: Number(extract(r, 0) || 0), username: String(extract(r, 1) || ""), avatar: extract(r, 2), createdAt: formatDate(extract(r, 3)) } } });
+    }
+
+    // === auth.qq.start (GET) - Redirect to QQ authorization page ===
+    if (path === "auth.qq.start") {
+      const appId = process.env.QQ_APP_ID;
+      const appKey = process.env.QQ_APP_KEY;
+      if (!appId || !appKey) {
+        return json({ error: { message: "QQ登录未配置（缺少 QQ_APP_ID / QQ_APP_KEY）" } }, 500);
+      }
+      const from = url.searchParams.get("from") || "/";
+      const site = getSiteUrl(request);
+      const redirectUri = `${site}/api/auth/qq/callback`;
+      const state = await makeOAuthState(from);
+      const authorizeUrl =
+        "https://graph.qq.com/oauth2.0/authorize" +
+        "?response_type=code" +
+        "&client_id=" + encodeURIComponent(appId) +
+        "&redirect_uri=" + encodeURIComponent(redirectUri) +
+        "&state=" + encodeURIComponent(state) +
+        "&scope=get_user_info";
+      return new Response(null, { status: 302, headers: { Location: authorizeUrl } });
+    }
+
+    // === auth.qq.callback (GET) - Exchange code, create/login user, redirect back ===
+    if (path === "auth.qq.callback") {
+      const appId = process.env.QQ_APP_ID;
+      const appKey = process.env.QQ_APP_KEY;
+      const site = getSiteUrl(request);
+      const redirectUri = `${site}/api/auth/qq/callback`;
+      const failRedirect = (msg) => new Response(null, {
+        status: 302,
+        headers: { Location: `${site}/?login_error=${encodeURIComponent(msg)}` },
+      });
+
+      if (!appId || !appKey) return failRedirect("QQ登录未配置，请联系管理员");
+      const code = url.searchParams.get("code");
+      if (!code) return failRedirect("QQ登录失败：未获取到授权码，请重试");
+
+      const stateRes = await parseOAuthState(url.searchParams.get("state"));
+      if (!stateRes.ok) return failRedirect("QQ登录失败：state校验未通过，请重试");
+
+      // 1. Exchange code for access_token
+      const tokenText = await (
+        await fetch(
+          "https://graph.qq.com/oauth2.0/token" +
+            "?grant_type=authorization_code" +
+            "&client_id=" + encodeURIComponent(appId) +
+            "&client_secret=" + encodeURIComponent(appKey) +
+            "&code=" + encodeURIComponent(code) +
+            "&redirect_uri=" + encodeURIComponent(redirectUri) +
+            "&fmt=json"
+        )
+      ).text();
+      const tokenData = parseJsonp(tokenText);
+      const accessToken = tokenData.access_token;
+      if (!accessToken) return failRedirect("QQ登录失败：" + (tokenData.error_description || "获取令牌失败"));
+
+      // 2. Get openid (+ unionid if enabled on the app)
+      const meText = await (
+        await fetch("https://graph.qq.com/oauth2.0/me?access_token=" + encodeURIComponent(accessToken) + "&fmt=json")
+      ).text();
+      const meData = parseJsonp(meText);
+      const openid = meData.openid;
+      if (!openid) return failRedirect("QQ登录失败：获取QQ身份失败，请重试");
+      const unionid = meData.unionid || null;
+
+      // 3. Get QQ nickname & avatar (best-effort, failures are non-fatal)
+      let nickname = "";
+      let avatar = null;
+      try {
+        const info = await (
+          await fetch(
+            "https://graph.qq.com/user/get_user_info" +
+              "?access_token=" + encodeURIComponent(accessToken) +
+              "&oauth_consumer_key=" + encodeURIComponent(appId) +
+              "&openid=" + encodeURIComponent(openid) +
+              "&fmt=json"
+          )
+        ).json();
+        if (info.ret === 0) {
+          nickname = String(info.nickname || "").trim();
+          avatar = info.figureurl_qq_2 || info.figureurl_qq_1 || null;
+          if (avatar) avatar = String(avatar).replace(/^http:\/\//, "https://");
+        }
+      } catch (e) { /* non-fatal */ }
+
+      // 4. Upsert user by qq_openid
+      await ensureUserTable();
+      const found = await executeSql("SELECT id, username FROM users WHERE qq_openid = ? LIMIT 1", [openid]);
+      let username;
+      if (found[0]?.rows?.length) {
+        username = String(extract(found[0].rows[0], 1) || "");
+        if (avatar) {
+          await executeSql("UPDATE users SET avatar = ? WHERE qq_openid = ?", [avatar, openid]);
+        }
+      } else {
+        username = sanitizeUsername(nickname) || "QQ用户" + Math.floor(Math.random() * 90000 + 10000);
+        const nameTaken = await executeSql("SELECT id FROM users WHERE username = ? LIMIT 1", [username]);
+        if (nameTaken[0]?.rows?.length) {
+          username = username.slice(0, 12) + Math.floor(Math.random() * 9000 + 1000);
+        }
+        await executeSql(
+          "INSERT INTO users (username, avatar, qq_openid, qq_unionid) VALUES (?, ?, ?, ?)",
+          [username, avatar, openid, unionid]
+        );
+      }
+
+      // 5. Issue session token and redirect back to the app
+      const token = await makeSessionToken(openid);
+      const from = stateRes.from;
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `${site}/?qq_token=${encodeURIComponent(token)}&from=${encodeURIComponent(from)}` },
+      });
     }
 
     // === listing.list ===

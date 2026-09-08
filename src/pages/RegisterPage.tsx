@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Sparkles,
   ChevronRight,
+  MessageCircle,
 } from "lucide-react";
 
 /** Simple math expressions for username generation */
@@ -249,10 +250,25 @@ export default function RegisterPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 mx-auto ring-1 ring-emerald-500/20">
             <UserPlus className="h-7 w-7 text-emerald-400" />
           </div>
-          <h1 className="text-xl font-bold text-white">创建你的身份</h1>
+          <h1 className="text-xl font-bold text-white">登录</h1>
           <p className="text-sm text-zinc-500">
-            系统已为你随机分配了身份，完成验证即可开始
+            使用 QQ 一键登录，或继续匿名创建身份
           </p>
+        </div>
+
+        {/* QQ Login (primary) */}
+        <Button
+          onClick={() => (window.location.href = "/api/auth/qq")}
+          className="w-full bg-[#12b7f5] hover:bg-[#12b7f5]/90 text-white h-12 text-base gap-2"
+        >
+          <MessageCircle className="h-5 w-5" />
+          使用 QQ 登录
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-white/5" />
+          <span className="text-xs text-zinc-600">或继续匿名创建</span>
+          <div className="h-px flex-1 bg-white/5" />
         </div>
 
         {/* Identity Preview Card */}

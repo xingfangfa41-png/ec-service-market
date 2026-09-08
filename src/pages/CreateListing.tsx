@@ -221,12 +221,12 @@ export default function CreateListing() {
                 <p className="text-xs text-amber-500/70 mb-3">登录后你可以发布帖子、评论、管理自己的内容</p>
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => navigate("/register?from=/create")}
+                    onClick={() => (window.location.href = "/api/auth/qq?from=/create")}
                     size="sm"
                     className="bg-amber-600 hover:bg-amber-500 text-white h-8 text-xs"
                   >
                     <User className="h-3.5 w-3.5 mr-1" />
-                    创建身份
+                    QQ登录
                   </Button>
                   <Button
                     variant="ghost"

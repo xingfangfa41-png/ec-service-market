@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AVATARS } from "@/lib/user";
+import { getAvatarSrc } from "@/lib/user";
 import {
   Select,
   SelectContent,
@@ -437,7 +437,7 @@ export default function ListingDetail() {
                         <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden">
                           {comment.avatar ? (
                             <img
-                              src={`/avatars/${comment.avatar}.png`}
+                              src={/^https?:\/\//.test(String(comment.avatar)) ? comment.avatar : `/avatars/${comment.avatar}.png`}
                               alt="avatar"
                               className="w-full h-full object-cover"
                             />
@@ -477,7 +477,7 @@ export default function ListingDetail() {
                     <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden bg-emerald-500/10">
                       {currentUser ? (
                         <img
-                          src={AVATARS.find(a => a.id === currentUser.avatar)?.path || AVATARS[0].path}
+                          src={getAvatarSrc(currentUser.avatar)}
                           alt="avatar"
                           className="w-full h-full object-cover"
                         />
@@ -490,7 +490,7 @@ export default function ListingDetail() {
                         {currentUser ? (
                           <>你的昵称：<span className="text-zinc-300">{currentUser.username}</span></>
                         ) : (
-                          <span className="text-zinc-500">需要先<button onClick={() => navigate("/register?from=/listing/" + listingId)} className="text-emerald-400 hover:underline cursor-pointer bg-transparent border-none p-0">创建身份</button>才能评论</span>
+                          <span className="text-zinc-500">需要先<button onClick={() => (window.location.href = "/api/auth/qq?from=" + encodeURIComponent("/listing/" + listingId))} className="text-emerald-400 hover:underline cursor-pointer bg-transparent border-none p-0">QQ登录</button>才能评论</span>
                         )}
                       </p>
                       <div className="flex gap-2">

@@ -74,3 +74,24 @@ export const AVATARS = [
   { id: "penguin", name: "企鹅", path: "/avatars/penguin.png" },
   { id: "bear", name: "小熊", path: "/avatars/bear.png" },
 ];
+
+// Resolve avatar display source (supports remote QQ avatars)
+export function getAvatarSrc(avatar: string | null): string {
+  if (avatar && /^https?:\/\//.test(avatar)) return avatar;
+  return AVATARS.find((a) => a.id === avatar)?.path || AVATARS[0].path;
+}
+
+// Exchange a QQ session token for the current user (stores it on success)
+export async function fetchUserByQQToken(token: string): Promise<User | null> {
+  try {
+    const res = await fetch(`/api/trpc/user.getMe?qq_token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    const u = data?.result?.data;
+    if (!u) return null;
+    const user: User = { id: Number(u.id) || 0, username: String(u.username || ""), avatar: u.avatar || null };
+    setCurrentUser(user);
+    return user;
+  } catch {
+    return null;
+  }
+}

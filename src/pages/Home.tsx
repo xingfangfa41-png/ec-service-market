@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/time";
 import SiteNavPanel from "@/components/SiteNavPanel";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser, AVATARS } from "@/lib/user";
+import { getCurrentUser, getAvatarSrc, fetchUserByQQToken } from "@/lib/user";
 import {
   Plus,
   MessageCircle,
@@ -18,6 +18,11 @@ import {
   ImageIcon,
   User,
 } from "lucide-react";
+
+// Start QQ OAuth login (redirect to QQ authorization)
+function startQQLogin(from: string) {
+  window.location.href = "/api/auth/qq?from=" + encodeURIComponent(from);
+}
 
 // Listing type matching backend Drizzle schema (camelCase)
 interface Listing {
@@ -56,7 +61,27 @@ function getCategoryBadgeClass(category: string) {
 export default function Home() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("all");
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUserState] = useState(getCurrentUser);
+  const [loginError, setLoginError] = useState("");
+
+  // Handle QQ OAuth callback: exchange qq_token for the user, then go to `from`
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qqToken = params.get("qq_token");
+    const loginErr = params.get("login_error");
+    if (loginErr) setLoginError(loginErr);
+    if (!qqToken && !loginErr) return;
+    (async () => {
+      if (qqToken) {
+        const user = await fetchUserByQQToken(qqToken);
+        if (user) setCurrentUserState(user);
+      }
+      const from = params.get("from");
+      const target = from && from.startsWith("/") && !from.startsWith("//") ? from : "/";
+      window.history.replaceState({}, "", target);
+      navigate(target, { replace: true });
+    })();
+  }, [navigate]);
 
   // tRPC queries
   const { data: listings = [], isLoading, error: rpcError, refetch } = trpc.listing.list.useQuery(
@@ -87,7 +112,7 @@ export default function Home() {
               <div className="flex h-9 items-center gap-2 rounded-lg bg-white/5 px-2 border border-white/5">
                 <div className="h-6 w-6 rounded-full overflow-hidden bg-emerald-500/10">
                   <img
-                    src={AVATARS.find(a => a.id === currentUser.avatar)?.path || AVATARS[0].path}
+                    src={getAvatarSrc(currentUser.avatar)}
                     alt="avatar"
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -97,18 +122,18 @@ export default function Home() {
               </div>
             ) : (
               <Button
-                onClick={() => navigate("/register?from=/")}
+                onClick={() => startQQLogin("/")}
                 variant="ghost"
                 className="text-zinc-400 hover:text-white hover:bg-white/5 h-9 gap-2"
               >
                 <User className="h-4 w-4" />
-                <span className="hidden sm:inline">登录</span>
+                <span className="hidden sm:inline">QQ登录</span>
               </Button>
             )}
             <Button
               onClick={() => {
                 if (!currentUser) {
-                  navigate("/register?from=/create");
+                  startQQLogin("/create");
                   return;
                 }
                 navigate("/create");
@@ -124,6 +149,15 @@ export default function Home() {
 
       {/* Main */}
       <main className="mx-auto max-w-6xl px-4 py-6">
+        {/* QQ login error banner */}
+        {loginError && (
+          <div className="mb-6 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400 flex items-center gap-2">
+            <span className="shrink-0">⚠️</span>
+            <span>{loginError}</span>
+            <button onClick={() => setLoginError("")} className="ml-auto underline shrink-0">关闭</button>
+          </div>
+        )}
+
         {/* Category Quick Filter */}
         <div className="mb-6 flex flex-wrap gap-2">
           {categories.map((cat) => (
@@ -251,7 +285,7 @@ export default function Home() {
             <Button
               onClick={() => {
                 if (!currentUser) {
-                  navigate("/register?from=/create");
+                  startQQLogin("/create");
                   return;
                 }
                 navigate("/create");
