@@ -34,6 +34,7 @@ import {
   Save,
   Send,
   MessageSquare,
+  ArrowUpDown,
 } from "lucide-react";
 
 
@@ -469,22 +470,14 @@ export default function ListingDetail() {
                     {comments && comments.length > 0 && (
                       <span className="text-sm text-zinc-500">({comments.length})</span>
                     )}
-                    <span className="ml-auto flex items-center gap-1">
-                      {(["asc", "desc"] as const).map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => setCommentSort(v)}
-                          className={
-                            "px-2.5 py-1 text-xs rounded-lg border transition-colors " +
-                            (commentSort === v
-                              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
-                              : "text-zinc-500 border-white/10 hover:text-zinc-300 hover:border-white/25")
-                          }
-                        >
-                          {v === "asc" ? "正序" : "倒序"}
-                        </button>
-                      ))}
-                    </span>
+                    <button
+                      onClick={() => setCommentSort(commentSort === "asc" ? "desc" : "asc")}
+                      className="ml-auto flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border border-white/10 text-zinc-400 hover:text-emerald-300 hover:border-emerald-500/40 transition-colors"
+                      title="点击切换排序"
+                    >
+                      <ArrowUpDown className="h-3 w-3" />
+                      {commentSort === "asc" ? "正序" : "倒序"}
+                    </button>
                   </h3>
                 </div>
 
