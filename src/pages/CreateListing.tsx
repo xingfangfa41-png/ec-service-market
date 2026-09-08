@@ -26,9 +26,9 @@ import {
 } from "lucide-react";
 
 const categories = [
-  { key: "陪聊", label: "陪聊", icon: MessageCircle, desc: "找人陪聊、语音、一起玩游戏" },
-  { key: "找搭子", label: "找搭子", icon: Users, desc: "找队友、找CP、找固玩" },
-  { key: "公会宣传", label: "公会宣传", icon: Shield, desc: "宣传你的公会或社群" },
+  { key: "闲聊", label: "闲聊", icon: MessageCircle, desc: "找人聊天、语音、一起玩" },
+  { key: "组队", label: "组队", icon: Users, desc: "找队友、找玩伴" },
+  { key: "公会社区", label: "公会社区", icon: Shield, desc: "宣传你的公会或社群" },
 ];
 
 /** Format seconds to mm:ss */
