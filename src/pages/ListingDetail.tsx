@@ -372,14 +372,12 @@ export default function ListingDetail() {
                   <CategoryIcon className="h-3.5 w-3.5" />
                   {listing.category}
                 </span>
-                {listing.price ? (
-                  <span className={`price-tag ${listing.price === "免费" ? "price-tag-free" : "price-tag-paid"}`}>
+                {listing.price && listing.price !== "免费" ? (
+                  <span className="price-tag price-tag-paid">
                     <Tag className="h-3 w-3 mr-1" />
                     {listing.price}
                   </span>
-                ) : (
-                  <span className="price-tag price-tag-free">免费</span>
-                )}
+                ) : null}
               </div>
 
               {/* Publisher */}

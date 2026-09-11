@@ -296,9 +296,9 @@ export default function CreateListing() {
           {/* Tag */}
           <div className="space-y-2">
             <Label htmlFor="price" className="text-sm font-medium text-zinc-300">标签</Label>
-            <Input id="price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="例如：免费、长期有效、名额有限..." maxLength={100} disabled={isDisabled}
+            <Input id="price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="例如：长期有效、名额有限、随时可聊..." maxLength={100} disabled={isDisabled}
               className="bg-[#111118] border-white/10 text-white placeholder:text-zinc-700 focus-visible:ring-emerald-500/30 h-11 disabled:opacity-50" />
-            <p className="text-xs text-zinc-600">可以填写"免费"或自定义标签</p>
+            <p className="text-xs text-zinc-600">可以填写自定义标签</p>
           </div>
 
           {/* Screenshot Upload */}

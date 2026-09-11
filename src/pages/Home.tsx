@@ -350,14 +350,12 @@ export default function Home() {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {listing.price ? (
-                      <span className={`price-tag ${listing.price === "免费" ? "price-tag-free" : "price-tag-paid"}`}>
+                    {listing.price && listing.price !== "免费" ? (
+                      <span className="price-tag price-tag-paid">
                         <Tag className="h-3 w-3 mr-1" />
                         {listing.price}
                       </span>
-                    ) : (
-                      <span className="price-tag price-tag-free">免费</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">{listing.description}</p>
