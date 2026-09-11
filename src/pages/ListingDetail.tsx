@@ -333,9 +333,9 @@ export default function ListingDetail() {
                   className="bg-[#0d0d12] border-white/10 text-white h-10" />
               </div>
 
-              {/* Price */}
+              {/* Tag */}
               <div className="space-y-2">
-                <Label className="text-sm text-zinc-300">价格</Label>
+                <Label className="text-sm text-zinc-300">标签</Label>
                 <Input value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                   className="bg-[#0d0d12] border-white/10 text-white h-10" />
               </div>
