@@ -410,14 +410,12 @@ setInterval(function(){
 
 function doPlay(){
   if(!song||playing) return;
-  if(lockHeldByOther()) return; /* 别的标签/子站正在播，不抢声，杜绝双开重音 */
   ensureCtx().then(function(){
-    if(lockHeldByOther()) return; /* 异步期间对方已持锁，放弃 */
     if(ctx.state==="suspended") ctx.resume();
     if(offsetTick>=song.length){ offsetTick=0; notePtr=0; }
     playing=true; startCtxTime=ctx.currentTime;
     schedTimer=setInterval(schedule,40);
-    announcePlay();
+    announcePlay(); /* 写自己的锁：用户手动播放即抢锁，其他页面检测到新锁自动退出 */
     save(); emit();
   });
 }
