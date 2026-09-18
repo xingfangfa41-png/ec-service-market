@@ -371,6 +371,13 @@ function announcePlay(){
 function writeLock(){
   try{ document.cookie = "ec_nbs_lock=" + _myId + "_" + Date.now() + ";path=/;max-age=120;SameSite=Lax" + COOKIE_DOM; }catch(e){}
 }
+function clearLock(){
+  try{ document.cookie = "ec_nbs_lock=;path=/;max-age=0;expires=Thu, 01 Jan 1970 00:00:00 GMT;SameSite=Lax" + COOKIE_DOM; }catch(e){}
+}
+/* 本页被卸载/跳走（同标签导航、关标签）时立即释放锁，新页面不用等 5 秒过期就能接管续播 */
+window.addEventListener("pagehide", function(){
+  if(playing) clearLock();
+});
 function lockHolder(){
   try{
     var m = document.cookie.match(/(?:^|;\s*)ec_nbs_lock=([^;]*)/);
