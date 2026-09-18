@@ -386,7 +386,7 @@ setInterval(function(){
   if(playing){ writeLock(); }
   var l = lockHolder();
   /* 别的实例握着新锁：我安静退出（不写共享状态，共享进度由对方维护） */
-  if(l && l.id !== _myId && Date.now() - l.ts < 5000 && playing && l.ts > _playStartedAt){
+  if(l && l.id !== _myId && Date.now() - l.ts < 5000 && playing){
     playing=false; clearInterval(schedTimer); stopSrcs(); emit();
     return;
   }
@@ -402,7 +402,9 @@ setInterval(function(){
 
 function doPlay(){
   if(!song||playing) return;
+  if(lockHeldByOther()) return; /* 别的标签/子站正在播，不抢声，杜绝双开重音 */
   ensureCtx().then(function(){
+    if(lockHeldByOther()) return; /* 异步期间对方已持锁，放弃 */
     if(ctx.state==="suspended") ctx.resume();
     if(offsetTick>=song.length){ offsetTick=0; notePtr=0; }
     playing=true; startCtxTime=ctx.currentTime;
