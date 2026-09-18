@@ -392,10 +392,7 @@ export default function MusicBox() {
             <div className="np-style">
               <span className="np-style-lbl">音质</span>
               <div className="np-style-seg">
-                {["44","48","96","192"].map(q => (
-                  <button key={q} className={quality === q ? "on" : ""}
-                    onClick={() => { N()?.setQuality(q); setQuality(q); if (N() && !N().isPlaying()) N().play && N().play(); }}>{q}</button>
-                ))}
+                <button className="on" disabled style={{opacity:.7}} title="源文件原生 44.1kHz，无重采样">44.1kHz 原生</button>
               </div>
             </div>
 
@@ -428,12 +425,8 @@ export default function MusicBox() {
                     ))}
                   </div>
                   <div className="np-freq-presets">
-                    <span className="np-freq-prelbl">音质</span>
-                    {["44.1","48","96","192"].map(q => (
-                      <button key={q} className={quality === q.replace(".1","") ? "on" : ""}
-                        onClick={() => { const k = q === "44.1" ? "44" : q; N()?.setQuality(k); setQuality(k); if (N() && !N().isPlaying()) N().play && N().play(); }}>{q}</button>
-                    ))}
-                    <span className="np-q-info">{qualityInfo}</span>
+                    <span className="np-freq-prelbl">采样</span>
+                    <span className="np-q-info">44.1kHz 原生 · {qualityInfo}</span>
                   </div>
                 </>
               )}
