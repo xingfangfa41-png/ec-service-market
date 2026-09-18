@@ -203,7 +203,8 @@ function applyQuality(){
   if(verbGain && styleMode==="hifi") verbGain.gain.value = rev;
   if(exciterGain && styleMode==="hifi") exciterGain.gain.value = exc;
 }
-function setQuality(q){ if(q!=="44"&&q!=="48"&&q!=="96"&&q!=="192")return; quality = q; applyQuality(); save(); emit(); }
+/* 音质档已锁 44.1kHz（源文件原生采样率），不再提供上采样档位，避免手机发热 */
+function setQuality(q){ /* 固定 44，保留 API 兼容但忽略切换 */ return; }
 function getQuality(){ return quality; }
 var QUALITY_INFO = {
   "44":  { sr:"44.1 kHz", bit:"16 bit", kbps:"1411 kbps", label:"CD 级" },
