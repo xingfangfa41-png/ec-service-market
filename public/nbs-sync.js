@@ -406,7 +406,7 @@ setInterval(function(){
       else{ bindGestureResume(); }
     }
   }
-}, 1500);
+}, 300);
 
 function doPlay(){
   if(!song||playing) return;
