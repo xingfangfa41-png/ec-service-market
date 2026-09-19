@@ -542,10 +542,14 @@ window.addEventListener("pagehide",save);
 document.addEventListener("visibilitychange",function(){
   if(document.hidden){
     save();
-    if(!bgPlay && playing){ doPause(); bgAutoPaused=true; }
-  }else if(bgAutoPaused){
+    /* 本页切到后台：立即停播并放锁，让新页面（market/子站）接管续播，杜绝跨标签重音 */
+    if(playing){ doPause(); clearLock(); bgAutoPaused = true; }
+  } else if(bgAutoPaused){
     bgAutoPaused=false;
-    ensureCtx().then(function(){ if(ctx.resume)ctx.resume(); doPlay(); });
+    /* 切回来：如果锁还在自己手里（没人抢），恢复播放 */
+    if(!lockHeldByOther()){
+      ensureCtx().then(function(){ if(ctx.resume)ctx.resume(); doPlay(); });
+    }
   }
 });
 /* bfcache 恢复：页面被浏览器整个冻结后带回来，引擎其实还活着；
