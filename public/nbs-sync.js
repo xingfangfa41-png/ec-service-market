@@ -510,11 +510,12 @@ function tryResume(){
 /* 供其他页面调用：本页"上次在播放"时恢复（供 trends 等页 onload 调用，替代开屏手势） */
 function resumeIfPlayed(){
   if(!bgPlay) return;   // 关闭后台播放：跨页不续播
-  /* 本页打开即接管续播：直接写自己的锁，旧页面在播会在 ~300ms 内检测到新锁自动退出 */
+  /* 本页打开即接管续播：先写自己的锁，稍等旧页面退出再播，避免重音 */
   var st=load();
   if(st&&st.play && !playing){
+    writeLock();
     ensureCtx().then(function(){
-      if(ctx.state==="running"){ doPlay(); }
+      if(ctx.state==="running"){ setTimeout(doPlay, 500); }
       else{ bindGestureResume(); }
     });
   }
