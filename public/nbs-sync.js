@@ -515,8 +515,8 @@ function resumeIfPlayed(){
   if(st&&st.play && !playing){
     writeLock();
     ensureCtx().then(function(){
-      if(ctx.state==="running"){ setTimeout(doPlay, 500); }
-      else{ bindGestureResume(); }
+      if(ctx.resume) ctx.resume();
+      setTimeout(doPlay, 500);
     });
   }
 }
