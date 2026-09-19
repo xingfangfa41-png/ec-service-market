@@ -94,9 +94,11 @@ export default function Home() {
   // QQ 快捷登录 SDK：加载 qc_jssdk 渲染 QQ 头像按钮，授权完成后自动换取会话
   useEffect(() => {
     let cancelled = false;
+    const withTimeout = (p: Promise<any>, ms: number) =>
+      Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
     (async () => {
       try {
-        const cfg = await fetch("/api/auth/qq/config").then((r) => r.json());
+        const cfg = await withTimeout(fetch("/api/auth/qq/config").then((r) => r.json()), 3000);
         const appId = cfg && cfg.appId;
         if (!appId) return;
         const w = window as any;
@@ -106,25 +108,28 @@ export default function Home() {
         s.setAttribute("data-app_id", appId);
         s.setAttribute("data-redirect_uri", window.location.origin + "/");
         s.async = true;
-        s.onload = () => {
-          if (cancelled || !(window as any).QC) return;
-          (window as any).QC.Login({ btnId: "qqQuickLogin", size: "A_M", clientId: appId });
-          (window as any).QC.Login.getMe(async (openId: string, accessToken: string) => {
-            if (!openId || !accessToken) return;
-            try {
-              const res = await fetch(
-                `/api/auth/qq/sdk?openid=${encodeURIComponent(openId)}&access_token=${encodeURIComponent(accessToken)}`
-              ).then((r) => r.json());
-              if (res && res.token && res.user) {
-                localStorage.setItem("ec_user", JSON.stringify(res.user));
-                setCurrentUserState(res.user);
-              } else if (res && res.error) {
-                setLoginError(res.error.message || "QQ登录失败");
-              }
-            } catch (e) { /* ignore */ }
-          });
-        };
-        document.head.appendChild(s);
+        s.onerror = () => { /* 外部 SDK 加载失败，静默放弃，不影响页面 */ };
+        const loaded = await new Promise<boolean>((resolve) => {
+          const timer = setTimeout(() => resolve(false), 3000);
+          s.onload = () => { clearTimeout(timer); resolve(true); };
+          document.head.appendChild(s);
+        });
+        if (!loaded || cancelled || !(window as any).QC) return;
+        (window as any).QC.Login({ btnId: "qqQuickLogin", size: "A_M", clientId: appId });
+        (window as any).QC.Login.getMe(async (openId: string, accessToken: string) => {
+          if (!openId || !accessToken) return;
+          try {
+            const res = await fetch(
+              `/api/auth/qq/sdk?openid=${encodeURIComponent(openId)}&access_token=${encodeURIComponent(accessToken)}`
+            ).then((r) => r.json());
+            if (res && res.token && res.user) {
+              localStorage.setItem("ec_user", JSON.stringify(res.user));
+              setCurrentUserState(res.user);
+            } else if (res && res.error) {
+              setLoginError(res.error.message || "QQ登录失败");
+            }
+          } catch (e) { /* ignore */ }
+        });
       } catch (e) { /* ignore */ }
     })();
     return () => { cancelled = true; };
