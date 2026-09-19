@@ -494,18 +494,17 @@ fetch(BASE+"manifest.json")
     });
   }).catch(function(){});
 
-/* 尝试无手势续播（多数桌面浏览器允许；QQ/微信会被拒，转由首次手势触发） */
+/* 尝试无手势续播：主动写锁接管，主动 resume，浏览器允许就播，不允许由手势触发 */
 function tryResume(){
-  if(!bgPlay) return;   // 关闭后台播放：不自动续播
-  if(lockHeldByOther()){
-    /* 旧实例（如跳走前的 bfcache 页面）可能还握着锁：等它过期后重试接管，而不是永久放弃 */
-    setTimeout(function(){ if(!playing && bgPlay && !lockHeldByOther()){ var st=load(); if(st&&st.play) tryResume(); } }, 5500);
-    return;
+  if(!bgPlay) return;
+  var st=load();
+  if(st&&st.play){
+    writeLock();
+    ensureCtx().then(function(){
+      if(ctx.resume) ctx.resume();
+      setTimeout(doPlay, 500);
+    });
   }
-  ensureCtx().then(function(){
-    if(ctx.state==="running"){ doPlay(); }
-    else{ bindGestureResume(); }
-  });
 }
 /* 供其他页面调用：本页"上次在播放"时恢复（供 trends 等页 onload 调用，替代开屏手势） */
 function resumeIfPlayed(){
